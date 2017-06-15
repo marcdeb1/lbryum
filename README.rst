@@ -12,14 +12,14 @@ To install lbryum, run the following from this directory (use of a virtualenv is
 
 To run start the lbryum daemon, run::
 
-  lbryum daemon start
+  `lbryum daemon start`
   
   
 To stop the lbryum daemon, run::
 
-  lbryum daemon stop
+  `lbryum daemon stop`
   
   
 For a list of lbryum commands, run::
 
-  lbryum help
+  `lbryum help`
