@@ -215,13 +215,6 @@ def user_dir():
         return
 
 
-def format_satoshis_plain(x, decimal_point=8):
-    '''Display a satoshi amount scaled.  Always uses a '.' as a decimal
-    point and has no thousands separator'''
-    scale_factor = pow(10, decimal_point)
-    return "{:.8f}".format(Decimal(x) / scale_factor).rstrip('0').rstrip('.')
-
-
 def format_satoshis(x, is_diff=False, num_zeros=0, decimal_point=8, whitespaces=False):
     from locale import localeconv
     if x is None:
@@ -243,113 +236,6 @@ def format_satoshis(x, is_diff=False, num_zeros=0, decimal_point=8, whitespaces=
         result += " " * (decimal_point - len(fract_part))
         result = " " * (15 - len(result)) + result
     return result.decode('utf8')
-
-
-def timestamp_to_datetime(timestamp):
-    try:
-        return datetime.fromtimestamp(timestamp)
-    except:
-        return None
-
-
-def format_time(timestamp):
-    date = timestamp_to_datetime(timestamp)
-    return date.isoformat(' ')[:-3] if date else _("Unknown")
-
-
-# Takes a timestamp and returns a string with the approximation of the age
-def age(from_date, since_date=None, target_tz=None, include_seconds=False):
-    if from_date is None:
-        return "Unknown"
-
-    from_date = datetime.fromtimestamp(from_date)
-    if since_date is None:
-        since_date = datetime.now(target_tz)
-
-    td = time_difference(from_date - since_date, include_seconds)
-    return td + " ago" if from_date < since_date else "in " + td
-
-
-def time_difference(distance_in_time, include_seconds):
-    # distance_in_time = since_date - from_date
-    distance_in_seconds = int(round(abs(distance_in_time.days * 86400 + distance_in_time.seconds)))
-    distance_in_minutes = int(round(distance_in_seconds / 60))
-
-    if distance_in_minutes <= 1:
-        if include_seconds:
-            for remainder in [5, 10, 20]:
-                if distance_in_seconds < remainder:
-                    return "less than %s seconds" % remainder
-            if distance_in_seconds < 40:
-                return "half a minute"
-            elif distance_in_seconds < 60:
-                return "less than a minute"
-            else:
-                return "1 minute"
-        else:
-            if distance_in_minutes == 0:
-                return "less than a minute"
-            else:
-                return "1 minute"
-    elif distance_in_minutes < 45:
-        return "%s minutes" % distance_in_minutes
-    elif distance_in_minutes < 90:
-        return "about 1 hour"
-    elif distance_in_minutes < 1440:
-        return "about %d hours" % (round(distance_in_minutes / 60.0))
-    elif distance_in_minutes < 2880:
-        return "1 day"
-    elif distance_in_minutes < 43220:
-        return "%d days" % (round(distance_in_minutes / 1440))
-    elif distance_in_minutes < 86400:
-        return "about 1 month"
-    elif distance_in_minutes < 525600:
-        return "%d months" % (round(distance_in_minutes / 43200))
-    elif distance_in_minutes < 1051200:
-        return "about 1 year"
-    else:
-        return "over %d years" % (round(distance_in_minutes / 525600))
-
-
-block_explorer_info = {
-    'Biteasy.com': ('https://www.biteasy.com/blockchain',
-                    {'tx': 'transactions', 'addr': 'addresses'}),
-    'Bitflyer.jp': ('https://chainflyer.bitflyer.jp',
-                    {'tx': 'Transaction', 'addr': 'Address'}),
-    'Blockchain.info': ('https://blockchain.info',
-                        {'tx': 'tx', 'addr': 'address'}),
-    'blockchainbdgpzk.onion': ('https://blockchainbdgpzk.onion',
-                               {'tx': 'tx', 'addr': 'address'}),
-    'Blockr.io': ('https://btc.blockr.io',
-                  {'tx': 'tx/info', 'addr': 'address/info'}),
-    'Blocktrail.com': ('https://www.blocktrail.com/BTC',
-                       {'tx': 'tx', 'addr': 'address'}),
-    'Chain.so': ('https://www.chain.so',
-                 {'tx': 'tx/BTC', 'addr': 'address/BTC'}),
-    'Insight.is': ('https://insight.bitpay.com',
-                   {'tx': 'tx', 'addr': 'address'}),
-    'TradeBlock.com': ('https://tradeblock.com/blockchain',
-                       {'tx': 'tx', 'addr': 'address'}),
-}
-
-
-def block_explorer(config):
-    return config.get('block_explorer', 'Blockchain.info')
-
-
-def block_explorer_tuple(config):
-    return block_explorer_info.get(block_explorer(config))
-
-
-def block_explorer_URL(config, kind, item):
-    be_tuple = block_explorer_tuple(config)
-    if not be_tuple:
-        return
-    kind_str = be_tuple[1].get(kind)
-    if not kind_str:
-        return
-    url_parts = [be_tuple[0], kind_str, item]
-    return "/".join(url_parts)
 
 
 def parse_json(message):
