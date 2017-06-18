@@ -1,7 +1,6 @@
 import account
 import lbrycrd
 import transaction
-import wizard as wizard
 from coinchooser import COIN_CHOOSERS
 from commands import Commands, known_commands
 from interface import Connection, Interface
