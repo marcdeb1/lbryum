@@ -50,7 +50,6 @@ setup(
     },
     package_data={
         'lbryum': [
-            'www/index.html',
             'wordlist/*.txt',
             'locale/*/LC_MESSAGES/lbryum.mo',
         ]
