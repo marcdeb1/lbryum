@@ -1,4 +1,5 @@
 import os
+
 from i18n import _
 
 try:
@@ -12,7 +13,9 @@ proc = None
 def scan_qr(config):
     global proc
     if not zbar:
-        raise RuntimeError("\n".join([_("Cannot start QR scanner."),_("The zbar package is not available."),_("On Linux, try 'sudo pip install zbar'")]))
+        raise RuntimeError("\n".join(
+            [_("Cannot start QR scanner."), _("The zbar package is not available."),
+             _("On Linux, try 'sudo pip install zbar'")]))
     if proc is None:
         device = config.get("video_device", "default")
         if device == 'default':
@@ -21,7 +24,6 @@ def scan_qr(config):
         _proc.init(video_device=device)
         # set global only if init did not raise an exception
         proc = _proc
-
 
     proc.visible = True
     while True:
@@ -37,12 +39,13 @@ def scan_qr(config):
             proc.visible = False
             return r.data
 
+
 def _find_system_cameras():
     device_root = "/sys/class/video4linux"
-    devices = {} # Name -> device
+    devices = {}  # Name -> device
     if os.path.exists(device_root):
         for device in os.listdir(device_root):
             name = open(os.path.join(device_root, device, 'name')).read()
             name = name.strip('\n')
-            devices[name] = os.path.join("/dev",device)
+            devices[name] = os.path.join("/dev", device)
     return devices

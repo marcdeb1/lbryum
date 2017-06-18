@@ -1,16 +1,15 @@
-import shutil
-import tempfile
-import sys
-import unittest
-import os
 import json
-
+import os
+import shutil
+import sys
+import tempfile
+import unittest
 from StringIO import StringIO
-from lib.wallet import WalletStorage, NewWallet
+
+from lib.wallet import NewWallet, WalletStorage
 
 
 class FakeSynchronizer(object):
-
     def __init__(self):
         self.store = []
 
@@ -19,7 +18,6 @@ class FakeSynchronizer(object):
 
 
 class WalletTestCase(unittest.TestCase):
-
     def setUp(self):
         super(WalletTestCase, self).setUp()
         self.user_dir = tempfile.mkdtemp()
@@ -38,10 +36,8 @@ class WalletTestCase(unittest.TestCase):
 
 
 class TestWalletStorage(WalletTestCase):
-
     def test_read_dictionnary_from_file(self):
-
-        some_dict = {"a":"b", "c":"d"}
+        some_dict = {"a": "b", "c": "d"}
         contents = repr(some_dict)
         with open(self.wallet_path, "w") as f:
             contents = f.write(contents)
@@ -51,10 +47,9 @@ class TestWalletStorage(WalletTestCase):
         self.assertEqual("d", storage.get("c"))
 
     def test_write_dictionnary_to_file(self):
-
         storage = WalletStorage(self.wallet_path)
 
-        some_dict = {"a":"b", "c":"d"}
+        some_dict = {"a": "b", "c": "d"}
 
         for key, value in some_dict.items():
             storage.put(key, value)
@@ -67,7 +62,6 @@ class TestWalletStorage(WalletTestCase):
 
 
 class TestNewWallet(WalletTestCase):
-
     seed_text = "travel nowhere air position hill peace suffer parent beautiful rise blood power home crumble teach"
     password = "secret"
 

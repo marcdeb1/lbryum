@@ -1,9 +1,10 @@
 import unittest
+
 from lib import mnemonic
 from lib import old_mnemonic
 
-class Test_NewMnemonic(unittest.TestCase):
 
+class Test_NewMnemonic(unittest.TestCase):
     def test_prepare_seed(self):
         seed = 'foo BAR Baz'
         self.assertEquals(mnemonic.prepare_seed(seed), 'foo bar baz')
@@ -24,7 +25,6 @@ class Test_NewMnemonic(unittest.TestCase):
 
 
 class Test_OldMnemonic(unittest.TestCase):
-
     def test(self):
         seed = '8edad31a95e7d59f8837667510d75a4d'
         result = old_mnemonic.mn_encode(seed)

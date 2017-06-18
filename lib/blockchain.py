@@ -18,9 +18,11 @@
 
 
 import os
-import util
-from lbryum.networks import blockchain_params
+
 from lbryum import lbrycrd
+from lbryum.networks import blockchain_params
+
+import util
 
 NULL_HASH = '0000000000000000000000000000000000000000000000000000000000000000'
 HEADER_SIZE = 112
@@ -77,8 +79,9 @@ class LbryCrd(util.PrintError):
         assert bits == header.get('bits'), "bits mismatch: %s vs %s (hash: %s)" % (
             bits, header.get('bits'), self.hash_header(header))
         _pow_hash = self.pow_hash_header(header)
-        assert int('0x' + _pow_hash, 16) <= target, "insufficient proof of work: %s vs target %s" % (
-        int('0x' + _pow_hash, 16), target)
+        assert int('0x' + _pow_hash,
+                   16) <= target, "insufficient proof of work: %s vs target %s" % (
+            int('0x' + _pow_hash, 16), target)
 
     def verify_chain(self, chain):
         first_header = chain[0]
@@ -384,7 +387,7 @@ class ArithUint256(object):
 
     def __mul__(self, x):
         # Take the mod because we are limited to an unsigned 256 bit number
-        return ArithUint256((self._value * x) % 2**256)
+        return ArithUint256((self._value * x) % 2 ** 256)
 
     def __idiv__(self, x):
         self._value = (self._value // x)

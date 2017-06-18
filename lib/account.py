@@ -17,10 +17,10 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import lbrycrd
-from lbrycrd import *
 from i18n import _
+from lbrycrd import *
 from transaction import Transaction, is_extended_pubkey
-from util import print_msg, InvalidPassword
+from util import InvalidPassword
 
 
 class Account(object):
@@ -213,7 +213,8 @@ class OldAccount(Account):
         master_private_key = ecdsa.SigningKey.from_secret_exponent(secexp, curve=SECP256k1)
         master_public_key = master_private_key.get_verifying_key().to_string()
         if master_public_key != self.mpk:
-            print_error('invalid password (mpk)', self.mpk.encode('hex'), master_public_key.encode('hex'))
+            print_error('invalid password (mpk)', self.mpk.encode('hex'),
+                        master_public_key.encode('hex'))
             raise InvalidPassword()
         return True
 
@@ -347,7 +348,8 @@ class Multisig_Account(BIP32_Account):
         return self.get_pubkey(for_change, n)
 
     def derive_pubkeys(self, for_change, n):
-        return map(lambda x: self.derive_pubkey_from_xpub(x, for_change, n), self.get_master_pubkeys())
+        return map(lambda x: self.derive_pubkey_from_xpub(x, for_change, n),
+                   self.get_master_pubkeys())
 
     def redeem_script(self, for_change, n):
         pubkeys = self.get_pubkeys(for_change, n)

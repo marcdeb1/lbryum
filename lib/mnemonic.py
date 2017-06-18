@@ -16,22 +16,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import os
+import hashlib
 import hmac
 import math
-import hashlib
+import os
 import pkgutil
-import unicodedata
 import string
-import sys
+import unicodedata
 
 import ecdsa
 import pbkdf2
 
-from util import print_error
-from lbrycrd import is_old_seed, is_new_seed
-import version
 import i18n
+import version
+from lbrycrd import is_new_seed, is_old_seed
+from util import print_error
 
 # http://www.asahi-net.or.jp/~ax2s-kmtn/ref/unicode/e_asia.html
 CJK_INTERVALS = [
@@ -42,7 +41,7 @@ CJK_INTERVALS = [
     (0x2B740, 0x2B81F, 'CJK Unified Ideographs Extension D'),
     (0xF900, 0xFAFF, 'CJK Compatibility Ideographs'),
     (0x2F800, 0x2FA1D, 'CJK Compatibility Ideographs Supplement'),
-    (0x3190, 0x319F , 'Kanbun'),
+    (0x3190, 0x319F, 'Kanbun'),
     (0x2E80, 0x2EFF, 'CJK Radicals Supplement'),
     (0x2F00, 0x2FDF, 'CJK Radicals'),
     (0x31C0, 0x31EF, 'CJK Strokes'),
@@ -66,9 +65,10 @@ CJK_INTERVALS = [
     (0xA490, 0xA4CF, 'Yi Radicals'),
 ]
 
+
 def is_CJK(c):
     n = ord(c)
-    for imin,imax,name in CJK_INTERVALS:
+    for imin, imax, name in CJK_INTERVALS:
         if imin <= n <= imax: return True
     return False
 
@@ -83,18 +83,18 @@ def prepare_seed(seed):
     # normalize whitespaces
     seed = u' '.join(seed.split())
     # remove whitespaces between CJK
-    seed = u''.join([seed[i] for i in range(len(seed)) if not (seed[i] in string.whitespace and is_CJK(seed[i-1]) and is_CJK(seed[i+1]))])
+    seed = u''.join([seed[i] for i in range(len(seed)) if not (
+    seed[i] in string.whitespace and is_CJK(seed[i - 1]) and is_CJK(seed[i + 1]))])
     return seed
 
 
 filenames = {
-    'en':'english.txt',
-    'es':'spanish.txt',
-    'ja':'japanese.txt',
-    'pt':'portuguese.txt',
-    'zh':'chinese_simplified.txt'
+    'en': 'english.txt',
+    'es': 'spanish.txt',
+    'ja': 'japanese.txt',
+    'pt': 'portuguese.txt',
+    'zh': 'chinese_simplified.txt'
 }
-
 
 
 class Mnemonic(object):
@@ -116,20 +116,21 @@ class Mnemonic(object):
             assert ' ' not in line
             if line:
                 self.wordlist.append(line)
-        print_error("wordlist has %d words"%len(self.wordlist))
+        print_error("wordlist has %d words" % len(self.wordlist))
 
     @classmethod
     def mnemonic_to_seed(self, mnemonic, passphrase):
         PBKDF2_ROUNDS = 2048
         mnemonic = prepare_seed(mnemonic)
-        return pbkdf2.PBKDF2(mnemonic, 'lbryum' + passphrase, iterations = PBKDF2_ROUNDS, macmodule = hmac, digestmodule = hashlib.sha512).read(64)
+        return pbkdf2.PBKDF2(mnemonic, 'lbryum' + passphrase, iterations=PBKDF2_ROUNDS,
+                             macmodule=hmac, digestmodule=hashlib.sha512).read(64)
 
     def mnemonic_encode(self, i):
         n = len(self.wordlist)
         words = []
         while i:
-            x = i%n
-            i = i/n
+            x = i % n
+            i = i / n
             words.append(self.wordlist[x])
         return ' '.join(words)
 
@@ -140,7 +141,7 @@ class Mnemonic(object):
         while words:
             w = words.pop()
             k = self.wordlist.index(w)
-            i = i*n + k
+            i = i * n + k
         return i
 
     def check_seed(self, seed, custom_entropy):
@@ -149,13 +150,13 @@ class Mnemonic(object):
         return i % custom_entropy == 0
 
     def make_seed(self, num_bits=128, prefix=version.SEED_PREFIX, custom_entropy=1):
-        n = int(math.ceil(math.log(custom_entropy,2)))
+        n = int(math.ceil(math.log(custom_entropy, 2)))
         # bits of entropy used by the prefix
-        k = len(prefix)*4
+        k = len(prefix) * 4
         # we add at least 16 bits
         n_added = max(16, k + num_bits - n)
-        print_error("make_seed", prefix, "adding %d bits"%n_added)
-        my_entropy = ecdsa.util.randrange( pow(2, n_added) )
+        print_error("make_seed", prefix, "adding %d bits" % n_added)
+        my_entropy = ecdsa.util.randrange(pow(2, n_added))
         nonce = 0
         while True:
             nonce += 1
@@ -166,5 +167,5 @@ class Mnemonic(object):
                 continue
             if is_new_seed(seed, prefix):
                 break
-        print_error('%d words'%len(seed.split()))
+        print_error('%d words' % len(seed.split()))
         return seed

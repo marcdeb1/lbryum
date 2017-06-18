@@ -1,8 +1,9 @@
-import unittest
-import random
 import hashlib
+import random
+import unittest
 
 from lib import ripemd
+
 
 class Test_RIPEMD160(unittest.TestCase):
     """ Test pure Python implementation against standard library. """

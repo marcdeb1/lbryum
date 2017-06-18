@@ -81,6 +81,7 @@ def modular_sqrt(a, p):
         b = (b * g) % p
         r = m
 
+
 def legendre_symbol(a, p):
     """ Compute the Legendre symbol a|p using
     Euler's criterion. p is a prime, a is

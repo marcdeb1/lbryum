@@ -16,16 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import ast, os
+import ast
+import os
 
 import jsonrpclib
-from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer, SimpleJSONRPCRequestHandler
+from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCRequestHandler, SimpleJSONRPCServer
 
-from util import json_decode, DaemonThread
-from wallet import WalletStorage, Wallet
-from wizard import WizardBase
-from commands import known_commands, Commands
+from commands import Commands, known_commands
 from simple_config import SimpleConfig
+from util import DaemonThread, json_decode
+from wallet import Wallet, WalletStorage
 
 
 def lockfile(config):
@@ -70,7 +70,8 @@ class Daemon(DaemonThread):
         self.cmd_runner = Commands(self.config, self.wallet, self.network)
         host = config.get('rpchost', 'localhost')
         port = config.get('rpcport', 0)
-        self.server = SimpleJSONRPCServer((host, port), requestHandler=RequestHandler, logRequests=False)
+        self.server = SimpleJSONRPCServer((host, port), requestHandler=RequestHandler,
+                                          logRequests=False)
         with open(lockfile(config), 'w') as f:
             f.write(repr(self.server.socket.getsockname()))
         self.server.timeout = 0.1
@@ -143,7 +144,6 @@ class Daemon(DaemonThread):
                     wallet.create_master_keys(None)
                     wallet.create_main_account()
                     wallet.synchronize()
-
 
                 wallet.start_threads(self.network)
             if wallet:

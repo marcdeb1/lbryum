@@ -17,10 +17,10 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
+import logging
 import os
 import re
 import socket
-import logging
 import ssl
 import sys
 import threading
@@ -38,7 +38,6 @@ else:
 import util
 import x509
 import pem
-
 
 log = logging.getLogger(__name__)
 
@@ -127,7 +126,8 @@ class TcpConnection(threading.Thread, util.PrintError):
                     return
                 # try with CA first
                 try:
-                    s = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_SSLv23, cert_reqs=ssl.CERT_REQUIRED,
+                    s = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_SSLv23,
+                                        cert_reqs=ssl.CERT_REQUIRED,
                                         ca_certs=ca_path, do_handshake_on_connect=True)
                 except ssl.SSLError, e:
                     s = None
@@ -141,7 +141,8 @@ class TcpConnection(threading.Thread, util.PrintError):
                 if s is None:
                     return
                 try:
-                    s = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_SSLv23, cert_reqs=ssl.CERT_NONE, ca_certs=None)
+                    s = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_SSLv23, cert_reqs=ssl.CERT_NONE,
+                                        ca_certs=None)
                 except ssl.SSLError, e:
                     self.print_error("SSL error retrieving SSL certificate:", e)
                     return
@@ -150,7 +151,8 @@ class TcpConnection(threading.Thread, util.PrintError):
                 s.close()
                 cert = ssl.DER_cert_to_PEM_cert(dercert)
                 # workaround android bug
-                cert = re.sub("([^\n])-----END CERTIFICATE-----", "\\1\n-----END CERTIFICATE-----", cert)
+                cert = re.sub("([^\n])-----END CERTIFICATE-----", "\\1\n-----END CERTIFICATE-----",
+                              cert)
                 temporary_path = cert_path + '.temp'
                 with open(temporary_path, "w") as f:
                     f.write(cert)

@@ -16,20 +16,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import threading, Queue, os, json, time
+import Queue
+import json
+import os
+import threading
 from collections import defaultdict
+
 try:
     from SimpleWebSocketServer import WebSocket, SimpleSSLWebSocketServer
 except ImportError:
     import sys
+
     sys.exit("install SimpleWebSocketServer")
 
 import util
 
 request_queue = Queue.Queue()
 
-class ElectrumWebSocket(WebSocket):
 
+class ElectrumWebSocket(WebSocket):
     def handleMessage(self):
         assert self.data[0:3] == 'id:'
         util.print_error("message received", self.data)
@@ -43,9 +48,7 @@ class ElectrumWebSocket(WebSocket):
         util.print_error("closed", self.address)
 
 
-
 class WsClientThread(util.DaemonThread):
-
     def __init__(self, config, network):
         util.DaemonThread.__init__(self)
         self.network = network
@@ -79,7 +82,6 @@ class WsClientThread(util.DaemonThread):
             self.subscriptions[addr] = l
             self.network.send([('blockchain.address.subscribe', [addr])], self.response_queue.put)
 
-
     def run(self):
         threading.Thread(target=self.reading_thread).start()
         while self.is_running():
@@ -94,19 +96,18 @@ class WsClientThread(util.DaemonThread):
             if result is None:
                 continue
             if method == 'blockchain.address.subscribe':
-                self.network.send([('blockchain.address.get_balance', params)], self.response_queue.put)
+                self.network.send([('blockchain.address.get_balance', params)],
+                                  self.response_queue.put)
             elif method == 'blockchain.address.get_balance':
                 addr = params[0]
                 l = self.subscriptions.get(addr, [])
                 for ws, amount in l:
                     if not ws.closed:
-                        if sum(result.values()) >=amount:
+                        if sum(result.values()) >= amount:
                             ws.sendMessage(unicode('paid'))
 
 
-
 class WebSocketServer(threading.Thread):
-
     def __init__(self, config, ns):
         threading.Thread.__init__(self)
         self.config = config
@@ -123,5 +124,3 @@ class WebSocketServer(threading.Thread):
         keyfile = self.config.get('ssl_privkey')
         self.server = SimpleSSLWebSocketServer(host, port, ElectrumWebSocket, certfile, keyfile)
         self.server.serveforever()
-
-

@@ -3,8 +3,8 @@ import unittest
 from lib import account
 from lib import wallet
 
-class Test_Account(unittest.TestCase):
 
+class Test_Account(unittest.TestCase):
     def test_bip32_account(self):
         v = {
             'change': [

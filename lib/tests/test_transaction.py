@@ -1,18 +1,16 @@
 import unittest
+
 from lib import transaction
 from lib.lbrycrd import TYPE_ADDRESS
-
-import pprint
 
 unsigned_blob = '01000000012a5c9a94fcde98f5581cd00162c60a13936ceb75389ea65bf38633b424eb4031000000005701ff4c53ff0488b21e03ef2afea18000000089689bff23e1e7fb2f161daa37270a97a3d8c2e537584b2d304ecb47b86d21fc021b010d3bd425f8cf2e04824bfdf1f1f5ff1d51fadd9a41f9e3fb8dd3403b1bfe00000000ffffffff0140420f00000000001976a914230ac37834073a42146f11ef8414ae929feaafc388ac00000000'
 signed_blob = '01000000012a5c9a94fcde98f5581cd00162c60a13936ceb75389ea65bf38633b424eb4031000000006c493046022100a82bbc57a0136751e5433f41cf000b3f1a99c6744775e76ec764fb78c54ee100022100f9e80b7de89de861dc6fb0c1429d5da72c2b6b2ee2406bc9bfb1beedd729d985012102e61d176da16edd1d258a200ad9759ef63adf8e14cd97f53227bae35cdb84d2f6ffffffff0140420f00000000001976a914230ac37834073a42146f11ef8414ae929feaafc388ac00000000'
 
 
 class TestBCDataStream(unittest.TestCase):
-
     def test_compact_size(self):
         s = transaction.BCDataStream()
-        values = [0, 1, 252, 253, 2**16-1, 2**16, 2**32-1, 2**32, 2**64-1]
+        values = [0, 1, 252, 253, 2 ** 16 - 1, 2 ** 16, 2 ** 32 - 1, 2 ** 32, 2 ** 64 - 1]
         for v in values:
             s.write_compact_size(v)
 
@@ -49,8 +47,8 @@ class TestBCDataStream(unittest.TestCase):
         self.assertEquals(s.read_bytes(4), 'r')
         self.assertEquals(s.read_bytes(1), '')
 
-class TestTransaction(unittest.TestCase):
 
+class TestTransaction(unittest.TestCase):
     def test_tx_unsigned(self):
         expected = {
             'inputs': [{
@@ -63,7 +61,8 @@ class TestTransaction(unittest.TestCase):
                 'scriptSig': '01ff4c53ff0488b21e03ef2afea18000000089689bff23e1e7fb2f161daa37270a97a3d8c2e537584b2d304ecb47b86d21fc021b010d3bd425f8cf2e04824bfdf1f1f5ff1d51fadd9a41f9e3fb8dd3403b1bfe00000000',
                 'sequence': 4294967295,
                 'signatures': [None],
-                'x_pubkeys': ['ff0488b21e03ef2afea18000000089689bff23e1e7fb2f161daa37270a97a3d8c2e537584b2d304ecb47b86d21fc021b010d3bd425f8cf2e04824bfdf1f1f5ff1d51fadd9a41f9e3fb8dd3403b1bfe00000000']}],
+                'x_pubkeys': [
+                    'ff0488b21e03ef2afea18000000089689bff23e1e7fb2f161daa37270a97a3d8c2e537584b2d304ecb47b86d21fc021b010d3bd425f8cf2e04824bfdf1f1f5ff1d51fadd9a41f9e3fb8dd3403b1bfe00000000']}],
             'lockTime': 0,
             'outputs': [{
                 'address': 'bFvZEougL4h3LnvAMr8kS1miCLsiJCpLpB',
@@ -71,7 +70,7 @@ class TestTransaction(unittest.TestCase):
                 'scriptPubKey': '76a914230ac37834073a42146f11ef8414ae929feaafc388ac',
                 'type': TYPE_ADDRESS,
                 'value': 1000000}],
-                'version': 1
+            'version': 1
         }
         tx = transaction.Transaction(unsigned_blob)
         self.assertEquals(tx.deserialize(), expected)
@@ -85,7 +84,8 @@ class TestTransaction(unittest.TestCase):
         self.assertTrue(tx.has_address('bFnNVhPUNRWiA6Y2hbd1KBAMgQBrFsc5u3'))
         self.assertFalse(tx.has_address('bScaWvgzAzFXzAcVgDDARfo9RFhdrm4pVc'))
 
-        self.assertEquals(tx.inputs_to_sign(), set(x_pubkey for i in expected['inputs'] for x_pubkey in i['x_pubkeys']))
+        self.assertEquals(tx.inputs_to_sign(),
+                          set(x_pubkey for i in expected['inputs'] for x_pubkey in i['x_pubkeys']))
         self.assertEquals(tx.serialize(), unsigned_blob)
 
         tx.update_signatures(signed_blob)
@@ -107,8 +107,10 @@ class TestTransaction(unittest.TestCase):
                 'pubkeys': ['02e61d176da16edd1d258a200ad9759ef63adf8e14cd97f53227bae35cdb84d2f6'],
                 'scriptSig': '493046022100a82bbc57a0136751e5433f41cf000b3f1a99c6744775e76ec764fb78c54ee100022100f9e80b7de89de861dc6fb0c1429d5da72c2b6b2ee2406bc9bfb1beedd729d985012102e61d176da16edd1d258a200ad9759ef63adf8e14cd97f53227bae35cdb84d2f6',
                 'sequence': 4294967295,
-                'signatures': ['3046022100a82bbc57a0136751e5433f41cf000b3f1a99c6744775e76ec764fb78c54ee100022100f9e80b7de89de861dc6fb0c1429d5da72c2b6b2ee2406bc9bfb1beedd729d985'],
-                'x_pubkeys': ['02e61d176da16edd1d258a200ad9759ef63adf8e14cd97f53227bae35cdb84d2f6']}],
+                'signatures': [
+                    '3046022100a82bbc57a0136751e5433f41cf000b3f1a99c6744775e76ec764fb78c54ee100022100f9e80b7de89de861dc6fb0c1429d5da72c2b6b2ee2406bc9bfb1beedd729d985'],
+                'x_pubkeys': [
+                    '02e61d176da16edd1d258a200ad9759ef63adf8e14cd97f53227bae35cdb84d2f6']}],
             'lockTime': 0,
             'outputs': [{
                 'address': 'bFvZEougL4h3LnvAMr8kS1miCLsiJCpLpB',
@@ -136,15 +138,17 @@ class TestTransaction(unittest.TestCase):
             transaction.parse_xpub('')
 
     def test_parse_xpub(self):
-        res = transaction.parse_xpub('fe4e13b0f311a55b8a5db9a32e959da9f011b131019d4cebe6141b9e2c93edcbfc0954c358b062a9f94111548e50bde5847a3096b8b7872dcffadb0e9579b9017b01000200')
-        self.assertEquals(res, ('04ee98d63800824486a1cf5b4376f2f574d86e0a3009a6448105703453f3368e8e1d8d090aaecdd626a45cc49876709a3bbb6dc96a4311b3cac03e225df5f63dfc', 'bMRQkGyYz3j5by7tamaCJ4WWXCR5oDmzYf'))
+        res = transaction.parse_xpub(
+            'fe4e13b0f311a55b8a5db9a32e959da9f011b131019d4cebe6141b9e2c93edcbfc0954c358b062a9f94111548e50bde5847a3096b8b7872dcffadb0e9579b9017b01000200')
+        self.assertEquals(res, (
+        '04ee98d63800824486a1cf5b4376f2f574d86e0a3009a6448105703453f3368e8e1d8d090aaecdd626a45cc49876709a3bbb6dc96a4311b3cac03e225df5f63dfc',
+        'bMRQkGyYz3j5by7tamaCJ4WWXCR5oDmzYf'))
 
         res = transaction.parse_xpub('fd007d260305ef27224bbcf6cf5238d2b3638b5a78d5')
         self.assertEquals(res, (None, 'bQ8zhKJViSigoeyJYYLDsTLsuaBraUv74z'))
 
 
 class NetworkMock(object):
-
     def __init__(self, unspent):
         self.unspent = unspent
 

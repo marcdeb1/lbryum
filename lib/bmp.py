@@ -25,7 +25,7 @@ bmp.py - module for constructing simple BMP graphics files
 __version__ = "0.3"
 __about = "bmp module, version %s, written by Paul McGuire, October, 2003, updated by Margus Laak, September, 2009" % __version__
 
-from math import ceil, hypot
+from math import ceil
 
 
 def shortToString(i):
@@ -50,7 +50,8 @@ def stringToLong(input_string, offset):
 
 
 def stringToLong24(input_string, offset):
-    return ord(input_string[offset + 2]) << 16 | ord(input_string[offset + 1]) << 8 | ord(input_string[offset])
+    return ord(input_string[offset + 2]) << 16 | ord(input_string[offset + 1]) << 8 | ord(
+        input_string[offset])
 
 
 class Color(object):
@@ -163,7 +164,8 @@ class BitMap(object):
 
         # write bitmap header
         _bitmap = "BM"
-        _bitmap += longToString(54 + self.ht * (self.wd * 3 + line_padding))  # DWORD size in bytes of the file
+        _bitmap += longToString(
+            54 + self.ht * (self.wd * 3 + line_padding))  # DWORD size in bytes of the file
         _bitmap += longToString(0)  # DWORD 0
         _bitmap += longToString(54)
         _bitmap += longToString(40)  # DWORD header size = 40
@@ -173,7 +175,8 @@ class BitMap(object):
         _bitmap += shortToString(24)  # WORD bits per pixel = 8
         _bitmap += longToString(0)  # DWORD compression = 0
         _bitmap += longToString(
-            self.ht * (self.wd * 3 + line_padding))  # DWORD sizeimage = size in bytes of the bitmap = width * height
+            self.ht * (
+            self.wd * 3 + line_padding))  # DWORD sizeimage = size in bytes of the bitmap = width * height
         _bitmap += longToString(0)  # DWORD horiz pixels per meter (?)
         _bitmap += longToString(0)  # DWORD ver pixels per meter (?)
         _bitmap += longToString(0)  # DWORD number of colors used = 256

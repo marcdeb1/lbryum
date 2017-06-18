@@ -26,23 +26,19 @@
 #  https://github.com/rthalley/dnspython/blob/master/tests/test_dnssec.py
 
 
-import traceback
-import sys
-import time
 import struct
+import time
 
-
-import dns.name
-import dns.query
 import dns.dnssec
 import dns.message
-import dns.resolver
+import dns.name
+import dns.query
 import dns.rdatatype
-import dns.rdtypes.ANY.NS
 import dns.rdtypes.ANY.CNAME
 import dns.rdtypes.ANY.DLV
 import dns.rdtypes.ANY.DNSKEY
 import dns.rdtypes.ANY.DS
+import dns.rdtypes.ANY.NS
 import dns.rdtypes.ANY.NSEC
 import dns.rdtypes.ANY.NSEC3
 import dns.rdtypes.ANY.NSEC3PARAM
@@ -51,9 +47,7 @@ import dns.rdtypes.ANY.SOA
 import dns.rdtypes.ANY.TXT
 import dns.rdtypes.IN.A
 import dns.rdtypes.IN.AAAA
-from dns.exception import DNSException
-
-
+import dns.resolver
 
 """
 Pure-Python version of dns.dnssec._validate_rsig
@@ -65,7 +59,8 @@ import rsakey
 
 def python_validate_rrsig(rrset, rrsig, keys, origin=None, now=None):
     from dns.dnssec import ValidationFailure, ECDSAP256SHA256, ECDSAP384SHA384
-    from dns.dnssec import _find_candidate_keys, _make_hash, _is_ecdsa, _is_rsa, _to_rdata, _make_algorithm_id
+    from dns.dnssec import _find_candidate_keys, _make_hash, _is_ecdsa, _is_rsa, _to_rdata, \
+        _make_algorithm_id
 
     if isinstance(origin, (str, unicode)):
         origin = dns.name.from_text(origin, dns.name.root)
@@ -173,14 +168,11 @@ dns.dnssec._validate_rrsig = python_validate_rrsig
 dns.dnssec.validate_rrsig = python_validate_rrsig
 dns.dnssec.validate = dns.dnssec._validate
 
-
-
 from util import print_error
 
-
 # hard-coded root KSK
-root_KSK = dns.rrset.from_text('.', 15202, 'IN', 'DNSKEY', '257 3 8 AwEAAagAIKlVZrpC6Ia7gEzahOR+9W29euxhJhVVLOyQbSEW0O8gcCjF FVQUTf6v58fLjwBd0YI0EzrAcQqBGCzh/RStIoO8g0NfnfL2MTJRkxoX bfDaUeVPQuYEhg37NZWAJQ9VnMVDxP/VHL496M/QZxkjf5/Efucp2gaD X6RS6CXpoY68LsvPVjR0ZSwzz1apAzvN9dlzEheX7ICJBBtuA6G3LQpz W5hOA2hzCTMjJPJ8LbqF6dsV6DoBQzgul0sGIcGOYl7OyQdXfZ57relS Qageu+ipAdTTJ25AsRTAoub8ONGcLmqrAmRLKBP1dfwhYB4N7knNnulq QxA+Uk1ihz0=')
-
+root_KSK = dns.rrset.from_text('.', 15202, 'IN', 'DNSKEY',
+                               '257 3 8 AwEAAagAIKlVZrpC6Ia7gEzahOR+9W29euxhJhVVLOyQbSEW0O8gcCjF FVQUTf6v58fLjwBd0YI0EzrAcQqBGCzh/RStIoO8g0NfnfL2MTJRkxoX bfDaUeVPQuYEhg37NZWAJQ9VnMVDxP/VHL496M/QZxkjf5/Efucp2gaD X6RS6CXpoY68LsvPVjR0ZSwzz1apAzvN9dlzEheX7ICJBBtuA6G3LQpz W5hOA2hzCTMjJPJ8LbqF6dsV6DoBQzgul0sGIcGOYl7OyQdXfZ57relS Qageu+ipAdTTJ25AsRTAoub8ONGcLmqrAmRLKBP1dfwhYB4N7knNnulq QxA+Uk1ihz0=')
 
 
 def check_query(ns, sub, _type, keys):
@@ -197,7 +189,7 @@ def check_query(ns, sub, _type, keys):
     else:
         raise BaseException('No signature set in record')
     if keys is None:
-        keys = {dns.name.from_text(sub):rrset}
+        keys = {dns.name.from_text(sub): rrset}
     dns.dnssec.validate(rrset, rrsig, keys)
     return rrset
 
@@ -209,7 +201,7 @@ def get_and_validate(ns, url, _type):
     # top-down verification
     parts = url.split('.')
     for i in range(len(parts), 0, -1):
-        sub = '.'.join(parts[i-1:])
+        sub = '.'.join(parts[i - 1:])
         name = dns.name.from_text(sub)
         # If server is authoritative, don't fetch DNSKEY
         query = dns.message.make_query(sub, dns.rdatatype.NS)
@@ -250,7 +242,7 @@ def query(url, rtype):
         out = get_and_validate(ns, url, rtype)
         validated = True
     except BaseException as e:
-        #traceback.print_exc(file=sys.stderr)
+        # traceback.print_exc(file=sys.stderr)
         print_error("DNSSEC error:", str(e))
         resolver = dns.resolver.get_default_resolver()
         out = resolver.query(url, rtype)

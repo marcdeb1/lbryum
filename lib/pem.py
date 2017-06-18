@@ -14,6 +14,7 @@ def a2b_base64(s):
         raise SyntaxError("base64 error: %s" % e)
     return b
 
+
 def b2a_base64(b):
     return binascii.b2a_base64(b)
 
@@ -33,17 +34,18 @@ def dePem(s, name):
     The first such PEM block in the input will be found, and its
     payload will be base64 decoded and returned.
     """
-    prefix  = "-----BEGIN %s-----" % name
+    prefix = "-----BEGIN %s-----" % name
     postfix = "-----END %s-----" % name
     start = s.find(prefix)
     if start == -1:
         raise SyntaxError("Missing PEM prefix")
-    end = s.find(postfix, start+len(prefix))
+    end = s.find(postfix, start + len(prefix))
     if end == -1:
         raise SyntaxError("Missing PEM postfix")
-    s = s[start+len("-----BEGIN %s-----" % name) : end]
-    retBytes = a2b_base64(s) # May raise SyntaxError
+    s = s[start + len("-----BEGIN %s-----" % name): end]
+    retBytes = a2b_base64(s)  # May raise SyntaxError
     return retBytes
+
 
 def dePemList(s, name):
     """Decode a sequence of PEM blocks into a list of bytearrays.
@@ -69,19 +71,20 @@ def dePemList(s, name):
     of bytearrays, which may have zero elements if not PEM blocks are found.
      """
     bList = []
-    prefix  = "-----BEGIN %s-----" % name
+    prefix = "-----BEGIN %s-----" % name
     postfix = "-----END %s-----" % name
     while 1:
         start = s.find(prefix)
         if start == -1:
             return bList
-        end = s.find(postfix, start+len(prefix))
+        end = s.find(postfix, start + len(prefix))
         if end == -1:
             raise SyntaxError("Missing PEM postfix")
-        s2 = s[start+len(prefix) : end]
-        retBytes = a2b_base64(s2) # May raise SyntaxError
+        s2 = s[start + len(prefix): end]
+        retBytes = a2b_base64(s2)  # May raise SyntaxError
         bList.append(retBytes)
-        s = s[end+len(postfix) : ]
+        s = s[end + len(postfix):]
+
 
 def pem(b, name):
     """Encode a payload bytearray into a PEM string.
@@ -95,7 +98,7 @@ def pem(b, name):
     KoZIhvcNAQEFBQADAwA5kw==
     -----END CERTIFICATE-----
     """
-    s1 = b2a_base64(b)[:-1] # remove terminating \n
+    s1 = b2a_base64(b)[:-1]  # remove terminating \n
     s2 = ""
     while s1:
         s2 += s1[:64] + "\n"
@@ -103,6 +106,7 @@ def pem(b, name):
     s = ("-----BEGIN %s-----\n" % name) + s2 + \
         ("-----END %s-----\n" % name)
     return s
+
 
 def pemSniff(inStr, name):
     searchStr = "-----BEGIN %s-----" % name
@@ -160,5 +164,5 @@ def _parseASN1PrivateKey(s):
     dP = asn1_node_next(s, q)
     dQ = asn1_node_next(s, dP)
     qInv = asn1_node_next(s, dQ)
-    return map(lambda x: bytesToNumber(asn1_get_value_of_type(s, x, 'INTEGER')), [n, e, d, p, q, dP, dQ, qInv])
-
+    return map(lambda x: bytesToNumber(asn1_get_value_of_type(s, x, 'INTEGER')),
+               [n, e, d, p, q, dP, dQ, qInv])

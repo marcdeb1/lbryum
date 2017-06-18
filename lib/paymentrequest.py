@@ -18,21 +18,21 @@
 
 
 import hashlib
+import json
 import os
-import re
 import sys
-import threading
 import time
 import traceback
 import urlparse
-import json
+
 import requests
 import requests.certs
 
 try:
     import paymentrequest_pb2 as pb2
 except ImportError:
-    sys.exit("Error: could not find paymentrequest_pb2.py. Create it with 'protoc --proto_path=lib/ --python_out=lib/ lib/paymentrequest.proto'")
+    sys.exit(
+        "Error: could not find paymentrequest_pb2.py. Create it with 'protoc --proto_path=lib/ --python_out=lib/ lib/paymentrequest.proto'")
 
 import lbrycrd
 import util
@@ -41,21 +41,19 @@ import transaction
 import x509
 import rsakey
 
-
 REQUEST_HEADERS = {'Accept': 'application/bitcoin-paymentrequest', 'User-Agent': 'Electrum'}
-ACK_HEADERS = {'Content-Type':'application/bitcoin-payment','Accept':'application/bitcoin-paymentack','User-Agent':'Electrum'}
+ACK_HEADERS = {'Content-Type': 'application/bitcoin-payment',
+               'Accept': 'application/bitcoin-paymentack', 'User-Agent': 'Electrum'}
 
 ca_path = requests.certs.where()
 ca_list, ca_keyID = x509.load_certificates(ca_path)
 
-
 # status of payment requests
-PR_UNPAID  = 0
+PR_UNPAID = 0
 PR_EXPIRED = 1
-PR_UNKNOWN = 2     # sent but not propagated
-PR_PAID    = 3     # send and propagated
-PR_ERROR   = 4     # could not parse
-
+PR_UNKNOWN = 2  # sent but not propagated
+PR_PAID = 3  # send and propagated
+PR_ERROR = 4  # could not parse
 
 
 def get_payment_request(url):
@@ -74,11 +72,10 @@ def get_payment_request(url):
 
 
 class PaymentRequest:
-
     def __init__(self, data):
         self.raw = data
         self.parse(data)
-        self.requestor = None # known after verify
+        self.requestor = None  # known after verify
         self.tx = None
 
     def __str__(self):
@@ -184,7 +181,7 @@ class PaymentRequest:
         return self.details.expires
 
     def get_amount(self):
-        return sum(map(lambda x:x[2], self.outputs))
+        return sum(map(lambda x: x[2], self.outputs))
 
     def get_requestor(self):
         return self.requestor if self.requestor else 'unknown'
@@ -240,7 +237,6 @@ class PaymentRequest:
         return True, paymntack.memo
 
 
-
 def make_unsigned_request(req):
     from transaction import Transaction
     addr = req['address']
@@ -278,7 +274,6 @@ def sign_request_with_alias(pr, alias, alias_privkey):
     pr.signature = ec_key.sign_message(message, compressed, address)
 
 
-
 def verify_cert_chain(chain):
     """ Verify a chain of certificates. The last certificate is the CA"""
     # parse the chain
@@ -295,7 +290,7 @@ def verify_cert_chain(chain):
     if not cert_num > 1:
         raise BaseException("ERROR: CA Certificate Chain Not Provided by Payment Processor")
     # if the root CA is not supplied, add it to the chain
-    ca = x509_chain[cert_num-1]
+    ca = x509_chain[cert_num - 1]
     if ca.getFingerprint() not in ca_list:
         keyID = ca.get_issuer_keyID()
         f = ca_keyID.get(keyID)
@@ -308,7 +303,7 @@ def verify_cert_chain(chain):
     cert_num = len(x509_chain)
     for i in range(1, cert_num):
         x = x509_chain[i]
-        prev_x = x509_chain[i-1]
+        prev_x = x509_chain[i - 1]
         algo, sig, data = prev_x.get_signature()
         sig = bytearray(sig)
         pubkey = rsakey.RSAKey(x.modulus, x.exponent)
@@ -354,6 +349,7 @@ def check_ssl_config(config):
         requestor = requestor[2:]
     return requestor
 
+
 def sign_request_with_x509(pr, key_path, cert_path):
     import pem
     with open(key_path, 'r') as f:
@@ -392,9 +388,7 @@ def make_request(config, req):
     return pr
 
 
-
 class InvoiceStore(object):
-
     def __init__(self, config):
         self.config = config
         self.invoices = {}
@@ -460,4 +454,3 @@ class InvoiceStore(object):
     def sorted_list(self):
         # sort
         return self.invoices.values()
-

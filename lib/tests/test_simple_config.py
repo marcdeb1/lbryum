@@ -1,17 +1,16 @@
 import ast
-import sys
 import os
-import unittest
-import tempfile
 import shutil
-
+import sys
+import tempfile
+import unittest
 from StringIO import StringIO
+
 from lib.simple_config import (SimpleConfig, read_system_config,
                                read_user_config)
 
 
 class Test_SimpleConfig(unittest.TestCase):
-
     def setUp(self):
         super(Test_SimpleConfig, self).setUp()
         # make sure "read_user_config" and "user_dir" return a temporary directory.
@@ -37,9 +36,9 @@ class Test_SimpleConfig(unittest.TestCase):
 
     def test_simple_config_key_rename(self):
         """auto_cycle was renamed auto_connect"""
-        fake_read_system = lambda : {}
+        fake_read_system = lambda: {}
         fake_read_user = lambda _: {"auto_cycle": True}
-        read_user_dir = lambda : self.user_dir
+        read_user_dir = lambda: self.user_dir
         config = SimpleConfig(options=self.options,
                               read_system_config_function=fake_read_system,
                               read_user_config_function=fake_read_user,
@@ -57,9 +56,9 @@ class Test_SimpleConfig(unittest.TestCase):
     def test_simple_config_command_line_overrides_everything(self):
         """Options passed by command line override all other configuration
         sources"""
-        fake_read_system = lambda : {"lbryum_path": "a"}
+        fake_read_system = lambda: {"lbryum_path": "a"}
         fake_read_user = lambda _: {"lbryum_path": "b"}
-        read_user_dir = lambda : self.user_dir
+        read_user_dir = lambda: self.user_dir
         config = SimpleConfig(options=self.options,
                               read_system_config_function=fake_read_system,
                               read_user_config_function=fake_read_user,
@@ -69,9 +68,9 @@ class Test_SimpleConfig(unittest.TestCase):
 
     def test_simple_config_user_config_overrides_system_config(self):
         """Options passed in user config override system config."""
-        fake_read_system = lambda : {"lbryum_path": self.lbryum_dir}
+        fake_read_system = lambda: {"lbryum_path": self.lbryum_dir}
         fake_read_user = lambda _: {"lbryum_path": "b"}
-        read_user_dir = lambda : self.user_dir
+        read_user_dir = lambda: self.user_dir
         config = SimpleConfig(options={},
                               read_system_config_function=fake_read_system,
                               read_user_config_function=fake_read_user,
@@ -81,9 +80,9 @@ class Test_SimpleConfig(unittest.TestCase):
     def test_simple_config_system_config_ignored_if_portable(self):
         """If electrum is started with the "portable" flag, system
         configuration is completely ignored."""
-        fake_read_system = lambda : {"some_key": "some_value"}
+        fake_read_system = lambda: {"some_key": "some_value"}
         fake_read_user = lambda _: {}
-        read_user_dir = lambda : self.user_dir
+        read_user_dir = lambda: self.user_dir
         config = SimpleConfig(options={"portable": True},
                               read_system_config_function=fake_read_system,
                               read_user_config_function=fake_read_user,
@@ -93,9 +92,9 @@ class Test_SimpleConfig(unittest.TestCase):
     def test_simple_config_user_config_is_used_if_others_arent_specified(self):
         """If no system-wide configuration and no command-line options are
         specified, the user configuration is used instead."""
-        fake_read_system = lambda : {}
+        fake_read_system = lambda: {}
         fake_read_user = lambda _: {"lbryum_path": self.lbryum_dir}
-        read_user_dir = lambda : self.user_dir
+        read_user_dir = lambda: self.user_dir
         config = SimpleConfig(options={},
                               read_system_config_function=fake_read_system,
                               read_user_config_function=fake_read_user,
@@ -104,9 +103,9 @@ class Test_SimpleConfig(unittest.TestCase):
                          config.get("lbryum_path"))
 
     def test_cannot_set_options_passed_by_command_line(self):
-        fake_read_system = lambda : {}
+        fake_read_system = lambda: {}
         fake_read_user = lambda _: {"lbryum_path": "b"}
-        read_user_dir = lambda : self.user_dir
+        read_user_dir = lambda: self.user_dir
         config = SimpleConfig(options=self.options,
                               read_system_config_function=fake_read_system,
                               read_user_config_function=fake_read_user,
@@ -117,9 +116,9 @@ class Test_SimpleConfig(unittest.TestCase):
 
     # noinspection PyPep8
     def test_can_set_options_from_system_config(self):
-        fake_read_system = lambda : {"lbryum_path": self.lbryum_dir}
+        fake_read_system = lambda: {"lbryum_path": self.lbryum_dir}
         fake_read_user = lambda _: {}
-        read_user_dir = lambda : self.user_dir
+        read_user_dir = lambda: self.user_dir
         config = SimpleConfig(options={},
                               read_system_config_function=fake_read_system,
                               read_user_config_function=fake_read_user,
@@ -129,9 +128,9 @@ class Test_SimpleConfig(unittest.TestCase):
 
     def test_can_set_options_set_in_user_config(self):
         another_path = tempfile.mkdtemp()
-        fake_read_system = lambda : {}
+        fake_read_system = lambda: {}
         fake_read_user = lambda _: {"lbryum_path": self.lbryum_dir}
-        read_user_dir = lambda : self.user_dir
+        read_user_dir = lambda: self.user_dir
         config = SimpleConfig(options={},
                               read_system_config_function=fake_read_system,
                               read_user_config_function=fake_read_user,
@@ -143,9 +142,9 @@ class Test_SimpleConfig(unittest.TestCase):
         """If the "portable" flag is set, the user can overwrite system
         configuration options."""
         another_path = tempfile.mkdtemp()
-        fake_read_system = lambda : {"lbryum_path": self.lbryum_dir}
+        fake_read_system = lambda: {"lbryum_path": self.lbryum_dir}
         fake_read_user = lambda _: {}
-        read_user_dir = lambda : self.user_dir
+        read_user_dir = lambda: self.user_dir
         config = SimpleConfig(options={"portable": True},
                               read_system_config_function=fake_read_system,
                               read_user_config_function=fake_read_user,
@@ -156,9 +155,9 @@ class Test_SimpleConfig(unittest.TestCase):
     def test_user_config_is_not_written_with_read_only_config(self):
         """The user config does not contain command-line options or system
         options when saved."""
-        fake_read_system = lambda : {"something": "b"}
+        fake_read_system = lambda: {"something": "b"}
         fake_read_user = lambda _: {"something": "a"}
-        read_user_dir = lambda : self.user_dir
+        read_user_dir = lambda: self.user_dir
         self.options.update({"something": "c"})
         config = SimpleConfig(options=self.options,
                               read_system_config_function=fake_read_system,
@@ -173,7 +172,6 @@ class Test_SimpleConfig(unittest.TestCase):
 
 
 class TestSystemConfig(unittest.TestCase):
-
     sample_conf = """
 [client]
 gap_limit = 5
@@ -203,7 +201,6 @@ everything = 42
         self.assertEqual({"gap_limit": "5"}, result)
 
     def test_read_system_config_file_no_sections(self):
-
         with open(self.thefile, "w") as f:
             f.write("gap_limit = 5")  # The file has no sections at all
 
@@ -212,7 +209,6 @@ everything = 42
 
 
 class TestUserConfig(unittest.TestCase):
-
     def setUp(self):
         super(TestUserConfig, self).setUp()
         self._saved_stdout = sys.stdout
@@ -227,8 +223,8 @@ class TestUserConfig(unittest.TestCase):
         sys.stdout = self._saved_stdout
 
     def test_no_path_means_no_result(self):
-       result = read_user_config(None)
-       self.assertEqual({}, result)
+        result = read_user_config(None)
+        self.assertEqual({}, result)
 
     def test_path_with_reprd_dict(self):
         thefile = os.path.join(self.user_dir, "config")
@@ -245,7 +241,6 @@ class TestUserConfig(unittest.TestCase):
         self.assertEqual({}, result)
 
     def test_path_with_reprd_object(self):
-
         class something(object):
             pass
 

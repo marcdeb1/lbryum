@@ -1,32 +1,39 @@
-import os, sys, re, json
-import platform
-import shutil
+import json
+import logging
+import os
+import re
+import sys
+import threading
+import traceback
+import urllib
+import urlparse
 from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
-import traceback
-import urlparse
-import urllib
-import threading
-import logging
+
 from i18n import _
 
 log = logging.getLogger("lbryum")
 
-base_units = {'BTC':8, 'mBTC':5, 'uBTC':2}
+base_units = {'BTC': 8, 'mBTC': 5, 'uBTC': 2}
+
 
 def normalize_version(v):
-    return [int(x) for x in re.sub(r'(\.0+)*$','', v).split(".")]
+    return [int(x) for x in re.sub(r'(\.0+)*$', '', v).split(".")]
+
 
 class NotEnoughFunds(Exception): pass
+
 
 class InvalidPassword(Exception):
     def __str__(self):
         return _("Incorrect password")
 
+
 class SilentException(Exception):
     '''An exception that should probably be suppressed from the user'''
     pass
+
 
 class MyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -35,8 +42,10 @@ class MyEncoder(json.JSONEncoder):
             return obj.as_dict()
         return super(MyEncoder, self).default(obj)
 
+
 class PrintError(object):
     '''A handy base class'''
+
     def diagnostic_name(self):
         return self.__class__.__name__
 
@@ -48,6 +57,7 @@ class PrintError(object):
         log.info(" ".join([str(m) for m in list(msg)]))
         print_msg("[%s]" % self.diagnostic_name(), *msg)
 
+
 class ThreadJob(PrintError):
     """A job that is run periodically from a thread's main loop.  run() is
     called from that thread's context.
@@ -57,8 +67,10 @@ class ThreadJob(PrintError):
         """Called periodically from the thread"""
         pass
 
+
 class DebugMem(ThreadJob):
     '''A handy class for debugging GC memory leaks'''
+
     def __init__(self, classes, interval=30):
         self.next_time = 0
         self.classes = classes
@@ -81,6 +93,7 @@ class DebugMem(ThreadJob):
         if time.time() > self.next_time:
             self.mem_stats()
             self.next_time = time.time() + self.interval
+
 
 class DaemonThread(threading.Thread, PrintError):
     """ daemon thread that terminates cleanly """
@@ -127,8 +140,9 @@ class DaemonThread(threading.Thread, PrintError):
             self.running = False
 
 
-
 is_verbose = False
+
+
 def set_verbosity(b):
     global is_verbose
     is_verbose = b
@@ -138,10 +152,12 @@ def print_error(*args):
     if not is_verbose: return
     print_stderr(*args)
 
+
 def print_stderr(*args):
     args = [str(item) for item in args]
     sys.stderr.write(" ".join(args) + "\n")
     sys.stderr.flush()
+
 
 def print_msg(*args):
     # Stringify args
@@ -149,18 +165,21 @@ def print_msg(*args):
     sys.stdout.write(" ".join(args) + "\n")
     sys.stdout.flush()
 
+
 def json_encode(obj):
     try:
-        s = json.dumps(obj, sort_keys = True, indent = 4, cls=MyEncoder)
+        s = json.dumps(obj, sort_keys=True, indent=4, cls=MyEncoder)
     except TypeError:
         s = repr(obj)
     return s
+
 
 def json_decode(x):
     try:
         return json.loads(x, parse_float=Decimal)
     except:
         return x
+
 
 # decorator that prints execution time
 def profiler(func):
@@ -169,10 +188,10 @@ def profiler(func):
         t0 = time.time()
         o = func(*args, **kw_args)
         t = time.time() - t0
-        print_error("[profiler]", n, "%.4f"%t)
+        print_error("[profiler]", n, "%.4f" % t)
         return o
-    return lambda *args, **kw_args: do_profile(func, args, kw_args)
 
+    return lambda *args, **kw_args: do_profile(func, args, kw_args)
 
 
 def user_dir():
@@ -185,28 +204,30 @@ def user_dir():
     elif 'ANDROID_DATA' in os.environ:
         try:
             import jnius
-            env  = jnius.autoclass('android.os.Environment')
-            _dir =  env.getExternalStorageDirectory().getPath()
+            env = jnius.autoclass('android.os.Environment')
+            _dir = env.getExternalStorageDirectory().getPath()
             return _dir + '/lbryum/'
         except ImportError:
             pass
         return "/sdcard/lbryum/"
     else:
-        #raise Exception("No home directory found in environment variables.")
+        # raise Exception("No home directory found in environment variables.")
         return
 
-def format_satoshis_plain(x, decimal_point = 8):
+
+def format_satoshis_plain(x, decimal_point=8):
     '''Display a satoshi amount scaled.  Always uses a '.' as a decimal
     point and has no thousands separator'''
     scale_factor = pow(10, decimal_point)
     return "{:.8f}".format(Decimal(x) / scale_factor).rstrip('0').rstrip('.')
 
-def format_satoshis(x, is_diff=False, num_zeros = 0, decimal_point = 8, whitespaces=False):
+
+def format_satoshis(x, is_diff=False, num_zeros=0, decimal_point=8, whitespaces=False):
     from locale import localeconv
     if x is None:
         return 'unknown'
     x = int(x)  # Some callers pass Decimal
-    scale_factor = pow (10, decimal_point)
+    scale_factor = pow(10, decimal_point)
     integer_part = "{:n}".format(int(abs(x) / scale_factor))
     if x < 0:
         integer_part = '-' + integer_part
@@ -223,11 +244,13 @@ def format_satoshis(x, is_diff=False, num_zeros = 0, decimal_point = 8, whitespa
         result = " " * (15 - len(result)) + result
     return result.decode('utf8')
 
+
 def timestamp_to_datetime(timestamp):
     try:
         return datetime.fromtimestamp(timestamp)
     except:
         return None
+
 
 def format_time(timestamp):
     date = timestamp_to_datetime(timestamp)
@@ -235,7 +258,7 @@ def format_time(timestamp):
 
 
 # Takes a timestamp and returns a string with the approximation of the age
-def age(from_date, since_date = None, target_tz=None, include_seconds=False):
+def age(from_date, since_date=None, target_tz=None, include_seconds=False):
     if from_date is None:
         return "Unknown"
 
@@ -248,9 +271,9 @@ def age(from_date, since_date = None, target_tz=None, include_seconds=False):
 
 
 def time_difference(distance_in_time, include_seconds):
-    #distance_in_time = since_date - from_date
+    # distance_in_time = since_date - from_date
     distance_in_seconds = int(round(abs(distance_in_time.days * 86400 + distance_in_time.seconds)))
-    distance_in_minutes = int(round(distance_in_seconds/60))
+    distance_in_minutes = int(round(distance_in_seconds / 60))
 
     if distance_in_minutes <= 1:
         if include_seconds:
@@ -287,32 +310,36 @@ def time_difference(distance_in_time, include_seconds):
     else:
         return "over %d years" % (round(distance_in_minutes / 525600))
 
+
 block_explorer_info = {
     'Biteasy.com': ('https://www.biteasy.com/blockchain',
-                        {'tx': 'transactions', 'addr': 'addresses'}),
+                    {'tx': 'transactions', 'addr': 'addresses'}),
     'Bitflyer.jp': ('https://chainflyer.bitflyer.jp',
-                        {'tx': 'Transaction', 'addr': 'Address'}),
+                    {'tx': 'Transaction', 'addr': 'Address'}),
     'Blockchain.info': ('https://blockchain.info',
                         {'tx': 'tx', 'addr': 'address'}),
     'blockchainbdgpzk.onion': ('https://blockchainbdgpzk.onion',
-                        {'tx': 'tx', 'addr': 'address'}),
+                               {'tx': 'tx', 'addr': 'address'}),
     'Blockr.io': ('https://btc.blockr.io',
-                        {'tx': 'tx/info', 'addr': 'address/info'}),
+                  {'tx': 'tx/info', 'addr': 'address/info'}),
     'Blocktrail.com': ('https://www.blocktrail.com/BTC',
-                        {'tx': 'tx', 'addr': 'address'}),
+                       {'tx': 'tx', 'addr': 'address'}),
     'Chain.so': ('https://www.chain.so',
-                        {'tx': 'tx/BTC', 'addr': 'address/BTC'}),
+                 {'tx': 'tx/BTC', 'addr': 'address/BTC'}),
     'Insight.is': ('https://insight.bitpay.com',
-                        {'tx': 'tx', 'addr': 'address'}),
+                   {'tx': 'tx', 'addr': 'address'}),
     'TradeBlock.com': ('https://tradeblock.com/blockchain',
-                        {'tx': 'tx', 'addr': 'address'}),
+                       {'tx': 'tx', 'addr': 'address'}),
 }
+
 
 def block_explorer(config):
     return config.get('block_explorer', 'Blockchain.info')
 
+
 def block_explorer_tuple(config):
     return block_explorer_info.get(block_explorer(config))
+
 
 def block_explorer_URL(config, kind, item):
     be_tuple = block_explorer_tuple(config)
@@ -324,9 +351,10 @@ def block_explorer_URL(config, kind, item):
     url_parts = [be_tuple[0], kind_str, item]
     return "/".join(url_parts)
 
+
 # URL decode
-#_ud = re.compile('%([0-9a-hA-H]{2})', re.MULTILINE)
-#urldecode = lambda x: _ud.sub(lambda m: chr(int(m.group(1), 16)), x)
+# _ud = re.compile('%([0-9a-hA-H]{2})', re.MULTILINE)
+# urldecode = lambda x: _ud.sub(lambda m: chr(int(m.group(1), 16)), x)
 
 def parse_URI(uri, on_pr=None):
     import lbrycrd
@@ -349,7 +377,7 @@ def parse_URI(uri, on_pr=None):
         pq = urlparse.parse_qs(u.query)
 
     for k, v in pq.items():
-        if len(v)!=1:
+        if len(v) != 1:
             raise Exception('Duplicate Key', k)
 
     out = {k: v[0] for k, v in pq.items()}
@@ -361,7 +389,7 @@ def parse_URI(uri, on_pr=None):
         m = re.match('([0-9\.]+)X([0-9])', am)
         if m:
             k = int(m.group(2)) - 8
-            amount = Decimal(m.group(1)) * pow(  Decimal(10) , k)
+            amount = Decimal(m.group(1)) * pow(Decimal(10), k)
         else:
             amount = Decimal(am) * COIN
         out['amount'] = int(amount)
@@ -387,6 +415,7 @@ def parse_URI(uri, on_pr=None):
             else:
                 request = pr.get_payment_request(r)
             on_pr(request)
+
         t = threading.Thread(target=get_payment_request_thread)
         t.setDaemon(True)
         t.start()
@@ -400,12 +429,13 @@ def create_URI(addr, amount, message):
         return ""
     query = []
     if amount:
-        query.append('amount=%s'%format_satoshis_plain(amount))
+        query.append('amount=%s' % format_satoshis_plain(amount))
     if message:
         if type(message) == unicode:
             message = message.encode('utf8')
-        query.append('message=%s'%urllib.quote(message))
-    p = urlparse.ParseResult(scheme='bitcoin', netloc='', path=addr, params='', query='&'.join(query), fragment='')
+        query.append('message=%s' % urllib.quote(message))
+    p = urlparse.ParseResult(scheme='bitcoin', netloc='', path=addr, params='',
+                             query='&'.join(query), fragment='')
     return urlparse.urlunparse(p)
 
 
@@ -415,27 +445,28 @@ def raw_input(prompt=None):
     if prompt:
         sys.stdout.write(prompt)
     return builtin_raw_input()
+
+
 import __builtin__
+
 builtin_raw_input = __builtin__.raw_input
 __builtin__.raw_input = raw_input
 
 
-
 def parse_json(message):
     n = message.find('\n')
-    if n==-1:
+    if n == -1:
         return None, message
     try:
-        j = json.loads( message[0:n] )
+        j = json.loads(message[0:n])
     except:
         j = None
-    return j, message[n+1:]
-
-
+    return j, message[n + 1:]
 
 
 class timeout(Exception):
     pass
+
 
 import socket
 import errno
@@ -443,8 +474,8 @@ import json
 import ssl
 import time
 
-class SocketPipe:
 
+class SocketPipe:
     def __init__(self, socket):
         self.socket = socket
         self.message = ''
@@ -505,7 +536,7 @@ class SocketPipe:
                 time.sleep(0.1)
                 continue
             except socket.error as e:
-                if e[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
+                if e[0] in (errno.EWOULDBLOCK, errno.EAGAIN):
                     print_error("EAGAIN: retrying")
                     time.sleep(0.1)
                     continue
@@ -518,11 +549,10 @@ class SocketPipe:
                     raise e
 
 
-
 import Queue
 
-class QueuePipe:
 
+class QueuePipe:
     def __init__(self, send_queue=None, get_queue=None):
         self.send_queue = send_queue if send_queue else Queue.Queue()
         self.get_queue = get_queue if get_queue else Queue.Queue()
@@ -555,9 +585,7 @@ class QueuePipe:
             self.send(request)
 
 
-
 class StoreDict(dict):
-
     def __init__(self, config, name):
         self.config = config
         self.path = os.path.join(self.config.path, name)
@@ -583,8 +611,6 @@ class StoreDict(dict):
         if key in self.keys():
             dict.pop(self, key)
             self.save()
-
-
 
 
 def check_www_dir(rdir):

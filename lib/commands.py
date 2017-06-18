@@ -16,46 +16,44 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import sys
-import datetime
-import time
-import copy
 import argparse
-import json
 import ast
 import base64
-from functools import wraps
-from decimal import Decimal
+import copy
+import datetime
+import json
 import logging
+import sys
+import time
+from decimal import Decimal
+from functools import wraps
+
 from ecdsa import BadSignatureError
 
-from lbryschema.error import DecodeError
-from lbryschema.decode import smart_decode
-from lbryschema.signer import get_signer, SECP256k1
-from lbryschema.claim import ClaimDict
-from lbryschema.uri import parse_lbry_uri, URIParseError
-
-from lbrycrd import base_decode
-import util
-from util import print_msg, format_satoshis, print_stderr, NotEnoughFunds
-import lbrycrd
-from lbrycrd import is_address, hash_160_to_bc_address, hash_160, COIN, TYPE_ADDRESS, Hash
-from lbrycrd import TYPE_CLAIM, TYPE_SUPPORT, TYPE_UPDATE, RECOMMENDED_CLAIMTRIE_HASH_CONFIRMS
-from transaction import Transaction
-from transaction import deserialize as deserialize_transaction, script_GetOp, decode_claim_script
-from transaction import get_address_from_output_script
-import paymentrequest
-from paymentrequest import PR_PAID, PR_UNPAID, PR_UNKNOWN, PR_EXPIRED
 import contacts
-from claims import verify_proof, InvalidProofError
-
+import lbrycrd
+import util
+from claims import InvalidProofError, verify_proof
+from lbrycrd import COIN, Hash, TYPE_ADDRESS, hash_160, hash_160_to_bc_address, is_address
+from lbrycrd import RECOMMENDED_CLAIMTRIE_HASH_CONFIRMS, TYPE_CLAIM, TYPE_SUPPORT, TYPE_UPDATE
+from lbrycrd import base_decode
+from lbryschema.claim import ClaimDict
+from lbryschema.decode import smart_decode
+from lbryschema.error import DecodeError
+from lbryschema.signer import SECP256k1, get_signer
+from lbryschema.uri import URIParseError, parse_lbry_uri
+from paymentrequest import PR_EXPIRED, PR_PAID, PR_UNKNOWN, PR_UNPAID
+from transaction import Transaction
+from transaction import decode_claim_script, deserialize as deserialize_transaction, script_GetOp
+from transaction import get_address_from_output_script
+from util import NotEnoughFunds, format_satoshis, print_msg, print_stderr
 
 log = logging.getLogger(__name__)
 
 known_commands = {}
 ADDRESS_LENGTH = 25
 MAX_PAGE_SIZE = 500
+
 
 # Format output from lbrycrd to have consistently
 # named ditionary keys
@@ -102,8 +100,9 @@ def format_lbrycrd_keys(obj, raw_claim=None):
                 obj[new_key] = format_lbrycrd_keys(val, raw_claim=raw_claim)
 
     elif isinstance(obj, list):
-        obj = [ format_lbrycrd_keys(o, raw_claim=raw_claim) for o in obj ]
+        obj = [format_lbrycrd_keys(o, raw_claim=raw_claim) for o in obj]
     return obj
+
 
 # Format amount to be decimal encoded string
 # Format value to be hex encoded string
@@ -118,9 +117,8 @@ def format_amount_value(obj):
             elif isinstance(v, list) or isinstance(v, dict):
                 obj[k] = format_amount_value(v)
     elif isinstance(obj, list):
-        obj = [ format_amount_value(o) for o in obj ]
+        obj = [format_amount_value(o) for o in obj]
     return obj
-
 
 
 class Command:
@@ -148,15 +146,18 @@ def command(s):
         global known_commands
         name = func.__name__
         known_commands[name] = Command(func, s)
+
         @wraps(func)
         def func_wrapper(*args, **kwargs):
             return func(*args, **kwargs)
+
         return func_wrapper
+
     return decorator
 
 
 class Commands:
-    def __init__(self, config, wallet, network, callback = None, password=None, new_password=None):
+    def __init__(self, config, wallet, network, callback=None, password=None, new_password=None):
         self.config = config
         self.wallet = wallet
         self.network = network
@@ -168,7 +169,7 @@ class Commands:
     def _run(self, method, args, password_getter):
         cmd = known_commands[method]
         if cmd.requires_password and self.wallet.use_encryption:
-            self._password = apply(password_getter,())
+            self._password = apply(password_getter, ())
         f = getattr(self, method)
         result = f(*args)
         self._password = None
@@ -205,7 +206,7 @@ class Commands:
         """Change wallet password. """
         self.wallet.update_password(self._password, self.new_password)
         self.wallet.storage.write()
-        return {'password':self.wallet.use_encryption}
+        return {'password': self.wallet.use_encryption}
 
     @command('')
     def getconfig(self, key):
@@ -246,10 +247,10 @@ class Commands:
     def listunspent(self):
         """List unspent outputs. Returns the list of unspent transaction
         outputs in your wallet."""
-        l = copy.deepcopy(self.wallet.get_spendable_coins(exclude_frozen = False))
+        l = copy.deepcopy(self.wallet.get_spendable_coins(exclude_frozen=False))
         for i in l:
             v = i["value"]
-            i["value"] = float(v)/COIN if v is not None else None
+            i["value"] = float(v) / COIN if v is not None else None
         return l
 
     @command('n')
@@ -270,7 +271,7 @@ class Commands:
     @command('wp')
     def createrawtx(self, inputs, outputs, unsigned=False):
         """Create a transaction from json inputs. The syntax is similar to bitcoind."""
-        coins = self.wallet.get_spendable_coins(exclude_frozen = False)
+        coins = self.wallet.get_spendable_coins(exclude_frozen=False)
         tx_inputs = []
         for i in inputs:
             prevout_hash = i['txid']
@@ -281,8 +282,9 @@ class Commands:
                     tx_inputs.append(c)
                     break
             else:
-                raise BaseException('Transaction output not in wallet', prevout_hash+":%d"%prevout_n)
-        outputs = map(lambda x: (TYPE_ADDRESS, x[0], int(COIN*x[1])), outputs.items())
+                raise BaseException('Transaction output not in wallet',
+                                    prevout_hash + ":%d" % prevout_n)
+        outputs = map(lambda x: (TYPE_ADDRESS, x[0], int(COIN * x[1])), outputs.items())
         tx = Transaction.from_io(tx_inputs, outputs)
         if not unsigned:
             self.wallet.sign_transaction(tx, self._password)
@@ -294,7 +296,7 @@ class Commands:
         t = Transaction(tx)
         if privkey:
             pubkey = lbrycrd.public_key_from_private_key(privkey)
-            t.sign({pubkey:privkey})
+            t.sign({pubkey: privkey})
         else:
             self.wallet.sign_transaction(t, self._password)
         return t.as_dict()
@@ -316,7 +318,7 @@ class Commands:
         assert isinstance(pubkeys, list), (type(num), type(pubkeys))
         redeem_script = Transaction.multisig_script(pubkeys, num)
         address = hash_160_to_bc_address(hash_160(redeem_script.decode('hex')), 5)
-        return {'address':address, 'redeemScript':redeem_script}
+        return {'address': address, 'redeemScript': redeem_script}
 
     @command('w')
     def freeze(self, address):
@@ -362,12 +364,12 @@ class Commands:
         if account is None:
             c, u, x = self.wallet.get_balance(exclude_claimtrietx=exclude_claimtrietx)
         else:
-            c, u, x = self.wallet.get_account_balance(account,exclude_claimtrietx)
-        out = {"confirmed": str(Decimal(c)/COIN)}
+            c, u, x = self.wallet.get_account_balance(account, exclude_claimtrietx)
+        out = {"confirmed": str(Decimal(c) / COIN)}
         if u:
-            out["unconfirmed"] = str(Decimal(u)/COIN)
+            out["unconfirmed"] = str(Decimal(u) / COIN)
         if x:
-            out["unmatured"] = str(Decimal(x)/COIN)
+            out["unmatured"] = str(Decimal(x) / COIN)
         return out
 
     @command('n')
@@ -376,8 +378,8 @@ class Commands:
         server query, results are not checked by SPV.
         """
         out = self.network.synchronous_get(('blockchain.address.get_balance', [address]))
-        out["confirmed"] =  str(Decimal(out["confirmed"])/COIN)
-        out["unconfirmed"] =  str(Decimal(out["unconfirmed"])/COIN)
+        out["confirmed"] = str(Decimal(out["confirmed"]) / COIN)
+        out["unconfirmed"] = str(Decimal(out["unconfirmed"]) / COIN)
         return out
 
     @command('n')
@@ -385,7 +387,7 @@ class Commands:
         """Get Merkle branch of an address in the UTXO set"""
         p = self.network.synchronous_get(('blockchain.address.get_proof', [address]))
         out = []
-        for i,s in p:
+        for i, s in p:
             out.append(i)
         return out
 
@@ -393,7 +395,8 @@ class Commands:
     def getmerkle(self, txid, height):
         """Get Merkle branch of a transaction included in a block. Electrum
         uses this to verify transactions (Simple Payment Verification)."""
-        return self.network.synchronous_get(('blockchain.transaction.get_merkle', [txid, int(height)]))
+        return self.network.synchronous_get(
+            ('blockchain.transaction.get_merkle', [txid, int(height)]))
 
     @command('n')
     def getservers(self):
@@ -438,7 +441,8 @@ class Commands:
         if x is None:
             return None
         out = self.contacts.resolve(x)
-        if out.get('type') == 'openalias' and self.nocheck is False and out.get('validated') is False:
+        if out.get('type') == 'openalias' and self.nocheck is False and out.get(
+                'validated') is False:
             raise BaseException('cannot verify alias', x)
         return out['address']
 
@@ -452,7 +456,7 @@ class Commands:
         dest = self._resolver(destination)
         if tx_fee is None:
             tx_fee = 0.0001
-        fee = int(Decimal(tx_fee)*COIN)
+        fee = int(Decimal(tx_fee) * COIN)
         return Transaction.sweep(privkeys, self.network, dest, fee)
 
     @command('wp')
@@ -468,20 +472,21 @@ class Commands:
         sig = base64.b64decode(signature)
         return lbrycrd.verify_message(address, sig, message)
 
-    def _mktx(self, outputs, fee, change_addr, domain, nocheck, unsigned, claim_name=None, claim_val=None,
+    def _mktx(self, outputs, fee, change_addr, domain, nocheck, unsigned, claim_name=None,
+              claim_val=None,
               abandon_txid=None, claim_id=None):
         self.nocheck = nocheck
         change_addr = self._resolver(change_addr)
         domain = None if domain is None else map(self._resolver, domain)
-        fee = None if fee is None else int(COIN*Decimal(fee))
+        fee = None if fee is None else int(COIN * Decimal(fee))
         final_outputs = []
         for address, amount in outputs:
             address = self._resolver(address)
-            #assert self.wallet.is_mine(address)
+            # assert self.wallet.is_mine(address)
             if amount == '!':
                 assert len(outputs) == 1
                 inputs = self.wallet.get_spendable_coins(domain)
-                amount = sum(map(lambda x:x['value'], inputs))
+                amount = sum(map(lambda x: x['value'], inputs))
                 if fee is None:
                     for i in inputs:
                         self.wallet.add_input_info(i)
@@ -491,7 +496,7 @@ class Commands:
                     fee = dummy_tx.estimated_fee(fee_per_kb)
                 amount -= fee
             else:
-                amount = int(COIN*Decimal(amount))
+                amount = int(COIN * Decimal(amount))
             txout_type = TYPE_ADDRESS
             val = address
             if claim_name is not None and claim_val is not None and claim_id is not None and abandon_txid is not None:
@@ -509,9 +514,10 @@ class Commands:
             final_outputs.append((txout_type, val, amount))
 
         coins = self.wallet.get_spendable_coins(domain, abandon_txid=abandon_txid)
-        tx = self.wallet.make_unsigned_transaction(coins, final_outputs, self.config, fee, change_addr,
+        tx = self.wallet.make_unsigned_transaction(coins, final_outputs, self.config, fee,
+                                                   change_addr,
                                                    abandon_txid=abandon_txid)
-        str(tx) #this serializes
+        str(tx)  # this serializes
         if not unsigned:
             self.wallet.sign_transaction(tx, self._password)
 
@@ -526,14 +532,16 @@ class Commands:
         return addr
 
     @command('wp')
-    def payto(self, destination, amount, tx_fee=None, from_addr=None, change_addr=None, nocheck=False, unsigned=False):
+    def payto(self, destination, amount, tx_fee=None, from_addr=None, change_addr=None,
+              nocheck=False, unsigned=False):
         """Create a raw transaction. """
         domain = [from_addr] if from_addr else None
         tx = self._mktx([(destination, amount)], tx_fee, change_addr, domain, nocheck, unsigned)
         return tx.as_dict()
 
     @command('wpn')
-    def paytoandsend(self, destination, amount, tx_fee=None, from_addr=None, change_addr=None, nocheck=False, unsigned=False):
+    def paytoandsend(self, destination, amount, tx_fee=None, from_addr=None, change_addr=None,
+                     nocheck=False, unsigned=False):
         """Create and broadcast transaction. """
         domain = [from_addr] if from_addr else None
         tx = self._mktx([(destination, amount)], tx_fee, change_addr, domain, nocheck, unsigned)
@@ -553,7 +561,8 @@ class Commands:
         return False
 
     @command('wpn')
-    def sendclaimtoaddress(self, claim_id, destination, amount, tx_fee=None, change_addr=None, broadcast=True):
+    def sendclaimtoaddress(self, claim_id, destination, amount, tx_fee=None, change_addr=None,
+                           broadcast=True):
         claims = self.getnameclaims(raw=True, include_supports=False, claim_id=claim_id)
         if len(claims) > 1:
             return {"success": False, 'reason': 'more than one claim that matches'}
@@ -572,14 +581,16 @@ class Commands:
                            raw=False, skip_validate_schema=True)
 
     @command('wp')
-    def paytomany(self, outputs, tx_fee=None, from_addr=None, change_addr=None, nocheck=False, unsigned=False):
+    def paytomany(self, outputs, tx_fee=None, from_addr=None, change_addr=None, nocheck=False,
+                  unsigned=False):
         """Create a multi-output transaction. """
         domain = [from_addr] if from_addr else None
         tx = self._mktx(outputs, tx_fee, change_addr, domain, nocheck, unsigned)
         return tx.as_dict()
 
     @command('wp')
-    def paytomanyandsend(self, outputs, tx_fee=None, from_addr=None, change_addr=None, nocheck=False, unsigned=False):
+    def paytomanyandsend(self, outputs, tx_fee=None, from_addr=None, change_addr=None,
+                         nocheck=False, unsigned=False):
         """Create and broadcast a multi-output transaction. """
         domain = [from_addr] if from_addr else None
         tx = self._mktx(outputs, tx_fee, change_addr, domain, nocheck, unsigned)
@@ -598,12 +609,12 @@ class Commands:
                 time_str = "----"
             label = self.wallet.get_label(tx_hash)
             out.append({
-                'txid':tx_hash,
-                'timestamp':timestamp,
-                'date':"%16s"%time_str,
-                'label':label,
-                'value':float(value)/COIN if value is not None else None,
-                'confirmations':conf}
+                'txid': tx_hash,
+                'timestamp': timestamp,
+                'date': "%16s" % time_str,
+                'label': label,
+                'value': float(value) / COIN if value is not None else None,
+                'confirmations': conf}
             )
         return out
 
@@ -633,7 +644,8 @@ class Commands:
         return results
 
     @command('w')
-    def listaddresses(self, receiving=False, change=False, show_labels=False, frozen=False, unused=False, funded=False, show_balance=False):
+    def listaddresses(self, receiving=False, change=False, show_labels=False, frozen=False,
+                      unused=False, funded=False, show_balance=False):
         """List wallet addresses. Returns the list of all addresses in your wallet. Use optional arguments to filter the results."""
         out = []
         for addr in self.wallet.addresses(True):
@@ -649,7 +661,7 @@ class Commands:
                 continue
             item = addr
             if show_balance:
-                item += ", "+ format_satoshis(sum(self.wallet.get_addr_balance(addr)))
+                item += ", " + format_satoshis(sum(self.wallet.get_addr_balance(addr)))
             if show_labels:
                 item += ', ' + repr(self.wallet.labels.get(addr, ''))
             out.append(item)
@@ -696,8 +708,8 @@ class Commands:
             raise BaseException("Request not found")
         return self._format_request(r)
 
-    #@command('w')
-    #def ackrequest(self, serialized):
+    # @command('w')
+    # def ackrequest(self, serialized):
     #    """<Not implemented>"""
     #    pass
 
@@ -714,11 +726,11 @@ class Commands:
         else:
             f = None
         if f is not None:
-            out = filter(lambda x: x.get('status')==f, out)
+            out = filter(lambda x: x.get('status') == f, out)
         return map(self._format_request, out)
 
     @command('w')
-    def addrequest(self, amount, memo='', expiration=60*60, force=False):
+    def addrequest(self, amount, memo='', expiration=60 * 60, force=False):
         """Create a payment request."""
         addr = self.wallet.get_unused_address(None)
         if addr is None:
@@ -726,7 +738,7 @@ class Commands:
                 addr = self.wallet.create_new_address(None, False)
             else:
                 return False
-        amount = int(COIN*Decimal(amount))
+        amount = int(COIN * Decimal(amount))
         expiration = int(expiration)
         req = self.wallet.make_payment_request(addr, amount, memo, expiration)
         self.wallet.add_payment_request(req, self.config)
@@ -756,16 +768,18 @@ class Commands:
     @command('n')
     def notify(self, address, URL):
         """Watch an address. Everytime the address changes, a http POST is sent to the URL."""
+
         def callback(x):
             import urllib2
-            headers = {'content-type':'application/json'}
-            data = {'address':address, 'status':x.get('result')}
+            headers = {'content-type': 'application/json'}
+            data = {'address': address, 'status': x.get('result')}
             try:
                 req = urllib2.Request(URL, json.dumps(data), headers)
                 response_stream = urllib2.urlopen(req)
                 util.print_error('Got Response for %s' % address)
             except BaseException as e:
                 util.print_error(str(e))
+
         self.network.send([('blockchain.address.subscribe', [address])], callback)
         return True
 
@@ -799,7 +813,8 @@ class Commands:
                     print_msg("fetching certificate to check claim signature")
                     certificate = self.getclaimbyid(decoded.certificate_id)
                     if not certificate:
-                        raise Exception('Certificate claim {} not found'.format(decoded.certificate_id))
+                        raise Exception(
+                            'Certificate claim {} not found'.format(decoded.certificate_id))
                 claim_result['has_signature'] = True
                 claim_result['signature_is_valid'] = False
                 validated, channel_name = self.validate_claim_signature_and_get_channel_name(
@@ -840,19 +855,19 @@ class Commands:
         def _build_response(name, value, claim_id, txid, n, amount, effective_amount,
                             claim_sequence, claim_address, supports):
             r = {
-                    'name': name,
-                    'value': value.encode('hex'),
-                    'claim_id': claim_id,
-                    'txid': txid,
-                    'nout': n,
-                    'amount': str(Decimal(amount)/COIN),
-                    'effective_amount': str(Decimal(effective_amount) / COIN),
-                    'height': height,
-                    'depth': depth,
-                    'claim_sequence': claim_sequence,
-                    'address': claim_address,
-                    'supports': supports
-                }
+                'name': name,
+                'value': value.encode('hex'),
+                'claim_id': claim_id,
+                'txid': txid,
+                'nout': n,
+                'amount': str(Decimal(amount) / COIN),
+                'effective_amount': str(Decimal(effective_amount) / COIN),
+                'height': height,
+                'depth': depth,
+                'claim_sequence': claim_sequence,
+                'address': claim_address,
+                'supports': supports
+            }
             return r
 
         def _parse_proof_result(name, result):
@@ -871,7 +886,8 @@ class Commands:
                             effective_amount = amount + support_amount
                             decoded_script = [r for r in script_GetOp(scriptPubKey.decode('hex'))]
                             decode_out = decode_claim_script(decoded_script)
-                            decode_address = get_address_from_output_script(scriptPubKey.decode('hex'))
+                            decode_address = get_address_from_output_script(
+                                scriptPubKey.decode('hex'))
                             claim_address = decode_address[1][1]
                             claim_id = result['claim_id']
                             claim_sequence = result['claim_sequence']
@@ -885,12 +901,13 @@ class Commands:
                                                        effective_amount, claim_sequence,
                                                        claim_address, supports)
                             return {'error': 'name in proof did not match requested name'}
-                        return {'error': 'invalid nOut: %d (let(outputs): %d' % (nOut, len(tx['outputs']))}
+                        return {'error': 'invalid nOut: %d (let(outputs): %d' % (
+                        nOut, len(tx['outputs']))}
                     return {'error': "computed txid did not match given transaction: %s vs %s" %
                                      (computed_txhash, result['proof']['txhash'])
-                    }
+                            }
                 return {'error': "didn't receive a transaction with the proof"}
-            return {'error':'name is not claimed'}
+            return {'error': 'name is not claimed'}
 
         if 'proof' in result:
             try:
@@ -999,15 +1016,18 @@ class Commands:
 
         def iter_validate_channel_claims():
             for claim_ids in queries:
-                batch_result = self.network.synchronous_get(("blockchain.claimtrie.getclaimsbyids", claim_ids))
+                batch_result = self.network.synchronous_get(
+                    ("blockchain.claimtrie.getclaimsbyids", claim_ids))
                 for claim_id in claim_ids:
                     claim = batch_result[claim_id]
                     if claim['name'] == claim_names[claim_id]:
                         formatted_claim = self.parse_and_validate_claim_result(claim, certificate)
-                        formatted_claim['absolute_channel_position'] = claim_positions[claim['claim_id']]
+                        formatted_claim['absolute_channel_position'] = claim_positions[
+                            claim['claim_id']]
                         yield format_amount_value(formatted_claim)
                     else:
-                        print_msg("ignoring claim with name mismatch %s %s" % (claim['name'], claim['claim_id']))
+                        print_msg("ignoring claim with name mismatch %s %s" % (
+                        claim['name'], claim['claim_id']))
 
         yielded_page = False
         results = []
@@ -1091,9 +1111,9 @@ class Commands:
                     height = claim_response['height']
                     depth = self.network.get_server_height() - height
                     claim_result = Commands._verify_proof(parsed_uri.name,
-                                                                block_header['claim_trie_root'],
-                                                                claim_response,
-                                                                height, depth)
+                                                          block_header['claim_trie_root'],
+                                                          claim_response,
+                                                          height, depth)
                     result['claim'] = self.parse_and_validate_claim_result(claim_result,
                                                                            certificate,
                                                                            raw)
@@ -1164,7 +1184,7 @@ class Commands:
         for uri in uris:
             try:
                 parse_lbry_uri(uri)
-                uris_to_send += (str(uri), )
+                uris_to_send += (str(uri),)
             except URIParseError as err:
                 return {'error': err.message}
 
@@ -1172,7 +1192,7 @@ class Commands:
         block_header = self.network.blockchain.read_header(height)
         block_hash = self.network.blockchain.hash_header(block_header)
         response = self.network.synchronous_get(('blockchain.claimtrie.getvaluesforuris',
-                                                 (block_hash, ) + uris_to_send))
+                                                 (block_hash,) + uris_to_send))
         result = {}
         for uri, resolution in response.iteritems():
             result[uri] = self._handle_resolve_uri_response(parse_lbry_uri(str(uri)), block_header,
@@ -1271,14 +1291,15 @@ class Commands:
         if not parsed.is_channel:
             return {'error': 'not a channel uri'}
         elif parsed.claim_sequence is not None:
-            claims = self.network.synchronous_get(('blockchain.claimtrie.getclaimssignedbynthtoname',
-                                                 [parsed.name, parsed.claim_sequence]))
+            claims = self.network.synchronous_get(
+                ('blockchain.claimtrie.getclaimssignedbynthtoname',
+                 [parsed.name, parsed.claim_sequence]))
         elif parsed.claim_id is not None:
             claims = self.network.synchronous_get(('blockchain.claimtrie.getclaimssignedbyid',
-                                                 [parsed.claim_id]))
+                                                   [parsed.claim_id]))
         else:
             claims = self.network.synchronous_get(('blockchain.claimtrie.getclaimssignedby',
-                                                 [parsed.name]))
+                                                   [parsed.name]))
         if claims:
             result = format_amount_value(claims)
             return [self.parse_and_validate_claim_result(claim, raw=raw) for claim in result]
@@ -1310,14 +1331,13 @@ class Commands:
 
     @command('n')
     def getnetworkstatus(self):
-        out={'is_connecting':self.network.is_connecting(),
-            'is_connected':self.network.is_connected(),
-            'local_height':self.network.get_local_height(),
-            'server_height':self.network.get_server_height(),
-            'blocks_behind':self.network.get_blocks_behind(),
-            'retrieving_headers':self.network.blockchain.retrieving_headers}
+        out = {'is_connecting': self.network.is_connecting(),
+               'is_connected': self.network.is_connected(),
+               'local_height': self.network.get_local_height(),
+               'server_height': self.network.get_server_height(),
+               'blocks_behind': self.network.get_blocks_behind(),
+               'retrieving_headers': self.network.blockchain.retrieving_headers}
         return out
-
 
     @command('n')
     def getclaimtrie(self):
@@ -1350,7 +1370,7 @@ class Commands:
 
     @command('w')
     def getnameclaims(self, raw=False, include_abandoned=False, include_supports=True,
-                        claim_id=None, txid=None, nout=None):
+                      claim_id=None, txid=None, nout=None):
         """
         Get  my name claims from wallet
         """
@@ -1405,7 +1425,8 @@ class Commands:
         # this is assuming config is not set to dynamic, which in case it will get fees from lbrycrd's
         # fee estimation algorithm
         size = dummy_tx.estimated_size()
-        fee = Transaction.fee_for_size(self.wallet.relayfee(),self.wallet.fee_per_kb(self.config),size)
+        fee = Transaction.fee_for_size(self.wallet.relayfee(), self.wallet.fee_per_kb(self.config),
+                                       size)
         return fee
 
     @command('w')
@@ -1443,16 +1464,20 @@ class Commands:
         certificate_id = parsed_claim['certificate_id']
 
         if not skip_update_check:
-            my_claims = [claim for claim in self.getnameclaims(include_supports=False) if claim['name'] == name]
+            my_claims = [claim for claim in self.getnameclaims(include_supports=False) if
+                         claim['name'] == name]
             if len(my_claims) > 1:
                 return {'success': False, 'reason': "Dont know which claim to update"}
             if my_claims:
                 my_claim = my_claims[0]
 
                 if parsed_uri.claim_id and not my_claim['claim_id'].startswith(parsed_uri.claim_id):
-                    return {'success': False, 'reason': 'claim id in URI does not match claim to update'}
-                print_msg("There is an unspent claim in your wallet for this name, updating it instead")
-                return self.update(name, val, amount=amount, broadcast=broadcast, claim_addr=claim_addr,
+                    return {'success': False,
+                            'reason': 'claim id in URI does not match claim to update'}
+                print_msg(
+                    "There is an unspent claim in your wallet for this name, updating it instead")
+                return self.update(name, val, amount=amount, broadcast=broadcast,
+                                   claim_addr=claim_addr,
                                    tx_fee=tx_fee, change_addr=change_addr,
                                    certificate_id=certificate_id, raw=raw,
                                    skip_validate_schema=skip_validate_schema)
@@ -1468,11 +1493,11 @@ class Commands:
         if not base_decode(change_addr, ADDRESS_LENGTH, 58):
             return {'error': 'invalid change address'}
 
-        amount = int(COIN*amount)
+        amount = int(COIN * amount)
         if amount <= 0:
-            return {'success': False,'reason': 'Amount must be greater than 0'}
+            return {'success': False, 'reason': 'Amount must be greater than 0'}
         if tx_fee is not None:
-            tx_fee = int(COIN*tx_fee)
+            tx_fee = int(COIN * tx_fee)
             if tx_fee < 0:
                 return {'success': False, 'reason': 'tx_fee must be greater than or equal to 0'}
 
@@ -1520,13 +1545,13 @@ class Commands:
         for i, output in enumerate(tx._outputs):
             if output[0] & TYPE_CLAIM:
                 nout = i
-        assert(nout is not None)
+        assert (nout is not None)
 
         claimid = lbrycrd.encode_claim_id_hex(
             lbrycrd.claim_id_hash(lbrycrd.rev_hex(tx.hash()).decode('hex'), nout)
         )
         return {"success": True, "txid": tx.hash(), "nout": nout, "tx": str(tx),
-                "fee": str(Decimal(tx.get_fee())/COIN), "claim_id": claimid}
+                "fee": str(Decimal(tx.get_fee()) / COIN), "claim_id": claimid}
 
     @command('wpn')
     def claimcertificate(self, name, amount, broadcast=True, claim_addr=None, tx_fee=None,
@@ -1629,7 +1654,7 @@ class Commands:
 
     @command('wpn')
     def support(self, name, claim_id, amount, broadcast=True, claim_addr=None, tx_fee=None,
-                     change_addr=None):
+                change_addr=None):
         """
         Support a name claim
         """
@@ -1640,32 +1665,34 @@ class Commands:
             change_addr = self.wallet.create_new_address(for_change=True)
 
         claim_id = lbrycrd.decode_claim_id_hex(claim_id)
-        amount = int(COIN*amount)
+        amount = int(COIN * amount)
         if amount <= 0:
-            return {'success':False,'reason':'Amount must be greater than 0'}
+            return {'success': False, 'reason': 'Amount must be greater than 0'}
         if tx_fee is not None:
-            tx_fee = int(COIN*tx_fee)
+            tx_fee = int(COIN * tx_fee)
             if tx_fee < 0:
-                return {'success':False,'reason':'tx_fee must be greater than or equal to 0'}
+                return {'success': False, 'reason': 'tx_fee must be greater than or equal to 0'}
 
-        outputs = [(TYPE_ADDRESS | TYPE_SUPPORT,((name,claim_id),claim_addr),amount)]
+        outputs = [(TYPE_ADDRESS | TYPE_SUPPORT, ((name, claim_id), claim_addr), amount)]
         coins = self.wallet.get_spendable_coins()
         try:
-            tx = self.wallet.make_unsigned_transaction(coins,outputs,self.config,tx_fee,change_addr)
+            tx = self.wallet.make_unsigned_transaction(coins, outputs, self.config, tx_fee,
+                                                       change_addr)
         except NotEnoughFunds:
-            return {'success':False, 'reason':'Not enough funds'}
+            return {'success': False, 'reason': 'Not enough funds'}
         self.wallet.sign_transaction(tx, self._password)
         if broadcast:
-            success,out = self.wallet.sendtx(tx)
+            success, out = self.wallet.sendtx(tx)
             if not success:
-                return {'success':False,'reason':out}
+                return {'success': False, 'reason': out}
 
         nout = None
-        for i,output in enumerate(tx._outputs):
+        for i, output in enumerate(tx._outputs):
             if output[0] & TYPE_SUPPORT:
                 nout = i
 
-        return {"success":True,"txid":tx.hash(),"nout":nout,"tx":str(tx),"fee":str(Decimal(tx.get_fee())/COIN)}
+        return {"success": True, "txid": tx.hash(), "nout": nout, "tx": str(tx),
+                "fee": str(Decimal(tx.get_fee()) / COIN)}
 
     def verify_request_to_make_claim(self, uri, val, certificate_id):
         try:
@@ -1794,11 +1821,11 @@ class Commands:
         decoded_claim_id = lbrycrd.decode_claim_id_hex(claim_id)
 
         if amount is not None:
-            amount = int(COIN*amount)
+            amount = int(COIN * amount)
             if amount <= 0:
                 return {'success': False, 'reason': 'Amount must be greater than 0'}
         if tx_fee is not None:
-            tx_fee = int(COIN*tx_fee)
+            tx_fee = int(COIN * tx_fee)
             if tx_fee < 0:
                 return {'success': False, 'reason': 'tx_fee must be greater than or equal to 0'}
 
@@ -1889,11 +1916,11 @@ class Commands:
                 (
                     TYPE_ADDRESS,
                     change_addr,
-                    txout_value-amount
+                    txout_value - amount
                 )
             ]
-            fee = self._calculate_fee(inputs,dummy_outputs,tx_fee)
-            if fee > txout_value-amount:
+            fee = self._calculate_fee(inputs, dummy_outputs, tx_fee)
+            if fee > txout_value - amount:
                 return {
                     'success': False,
                     'reason': 'Fee will be greater than change amount, use amount=None to expend change as fee'
@@ -1908,8 +1935,8 @@ class Commands:
                 (
                     TYPE_ADDRESS,
                     change_addr,
-                    txout_value-amount-fee
-                 )
+                    txout_value - amount - fee
+                )
             ]
 
         tx = Transaction.from_io(inputs, outputs)
@@ -1931,13 +1958,14 @@ class Commands:
             "txid": tx.hash(),
             "nout": nout,
             "tx": str(tx),
-            "fee": str(Decimal(tx.get_fee())/COIN),
-            "amount": str(Decimal(amount)/COIN),
+            "fee": str(Decimal(tx.get_fee()) / COIN),
+            "amount": str(Decimal(amount) / COIN),
             "claim_id": claim_id
         }
 
     @command('wpn')
-    def abandon(self, claim_id=None, txid=None, nout=None, broadcast=True, return_addr=None, tx_fee=None):
+    def abandon(self, claim_id=None, txid=None, nout=None, broadcast=True, return_addr=None,
+                tx_fee=None):
         """
         Abandon a name claim
 
@@ -1956,32 +1984,34 @@ class Commands:
         if return_addr is None:
             return_addr = self.wallet.create_new_address()
         if tx_fee is not None:
-            tx_fee = int(COIN*tx_fee)
+            tx_fee = int(COIN * tx_fee)
             if tx_fee < 0:
-                return {'success':False,'reason':'tx_fee must be greater than or equal to 0'}
+                return {'success': False, 'reason': 'tx_fee must be greater than or equal to 0'}
 
-        i = self.wallet.get_spendable_claimtrietx_coin(txid,nout)
+        i = self.wallet.get_spendable_claimtrietx_coin(txid, nout)
         inputs = [i]
         txout_value = i['value']
         # create outputs
-        outputs = [(TYPE_ADDRESS,return_addr,txout_value)]
+        outputs = [(TYPE_ADDRESS, return_addr, txout_value)]
         # fee will be roughly 10,000 deweys (0.0001 lbc), standard abandon should be about 200 bytes
         # this is assuming config is not set to dynamic, which in case it will get fees from lbrycrd's
         # fee estimation algorithm
-        fee = self._calculate_fee(inputs,outputs,tx_fee)
+        fee = self._calculate_fee(inputs, outputs, tx_fee)
         if fee > txout_value:
-            return {'success':False,'reason':'transaction fee exceeds amount to abandon'}
+            return {'success': False, 'reason': 'transaction fee exceeds amount to abandon'}
         return_value = txout_value - fee
 
         # create transaction
-        outputs = [(TYPE_ADDRESS,return_addr,return_value)]
-        tx = Transaction.from_io(inputs,outputs)
+        outputs = [(TYPE_ADDRESS, return_addr, return_value)]
+        tx = Transaction.from_io(inputs, outputs)
         self.wallet.sign_transaction(tx, self._password)
         if broadcast:
-            success,out = self.wallet.sendtx(tx)
+            success, out = self.wallet.sendtx(tx)
             if not success:
-                return {'success':False,'reason':out}
-        return {'success':True,'txid':tx.hash(),'tx':str(tx),'fee':str(Decimal(tx.get_fee())/COIN)}
+                return {'success': False, 'reason': out}
+        return {'success': True, 'txid': tx.hash(), 'tx': str(tx),
+                'fee': str(Decimal(tx.get_fee()) / COIN)}
+
 
 param_descriptions = {
     'privkey': 'Private key. Type \'?\' to get a prompt.',
@@ -2004,54 +2034,61 @@ param_descriptions = {
 }
 
 command_options = {
-    'password':    ("-W", "--password",    "Password"),
-    'receiving':   (None, "--receiving",   "Show only receiving addresses"),
-    'change':      (None, "--change",      "Show only change addresses"),
-    'frozen':      (None, "--frozen",      "Show only frozen addresses"),
-    'unused':      (None, "--unused",      "Show only unused addresses"),
-    'funded':      (None, "--funded",      "Show only funded addresses"),
-    'show_balance':("-b", "--balance",     "Show the balances of listed addresses"),
-    'show_labels': ("-l", "--labels",      "Show the labels of listed addresses"),
-    'nocheck':     (None, "--nocheck",     "Do not verify aliases"),
-    'tx_fee':      ("-f", "--fee",         "Transaction fee (in BTC)"),
-    'from_addr':   ("-F", "--from",        "Source address. If it isn't in the wallet, it will ask for the private key unless supplied in the format public_key:private_key. It's not saved in the wallet."),
-    'change_addr': ("-c", "--change",      "Change address. Default is a spare address, or the source address if it's not in the wallet"),
-    'nbits':       (None, "--nbits",       "Number of bits of entropy"),
-    'entropy':     (None, "--entropy",     "Custom entropy"),
-    'language':    ("-L", "--lang",        "Default language for wordlist"),
-    'gap_limit':   ("-G", "--gap",         "Gap limit"),
-    'privkey':     (None, "--privkey",     "Private key. Set to '?' to get a prompt."),
-    'unsigned':    ("-u", "--unsigned",    "Do not sign transaction"),
-    'domain':      ("-D", "--domain",      "List of addresses"),
-    'account':     (None, "--account",     "Account"),
-    'memo':        ("-m", "--memo",        "Description of the request"),
-    'expiration':  (None, "--expiration",  "Time in seconds"),
-    'force':       (None, "--force",       "Create new address beyong gap limit, if no more address is available."),
-    'pending':     (None, "--pending",     "Show only pending requests."),
-    'expired':     (None, "--expired",     "Show only expired requests."),
-    'paid':        (None, "--paid",        "Show only paid requests."),
-    'exclude_claimtrietx':(None,"--exclude_claimtrietx", "Exclude claimtrie transactions"),
-    'return_addr': (None, "--return_addr", "Return address where amounts in abandoned claimtrie transactions are returned."),
-    'claim_addr':  (None, "--claim_addr",  "Address where claims are sent."),
-    'broadcast':   (None, "--broadcast",   "if True, broadcast the transaction"),
-    'raw':      ("-r", "--raw", "if True, don't decode claim values"),
-    'page':     ("-p", "--page", "page number"),
+    'password': ("-W", "--password", "Password"),
+    'receiving': (None, "--receiving", "Show only receiving addresses"),
+    'change': (None, "--change", "Show only change addresses"),
+    'frozen': (None, "--frozen", "Show only frozen addresses"),
+    'unused': (None, "--unused", "Show only unused addresses"),
+    'funded': (None, "--funded", "Show only funded addresses"),
+    'show_balance': ("-b", "--balance", "Show the balances of listed addresses"),
+    'show_labels': ("-l", "--labels", "Show the labels of listed addresses"),
+    'nocheck': (None, "--nocheck", "Do not verify aliases"),
+    'tx_fee': ("-f", "--fee", "Transaction fee (in BTC)"),
+    'from_addr': ("-F", "--from",
+                  "Source address. If it isn't in the wallet, it will ask for the private key unless supplied in the format public_key:private_key. It's not saved in the wallet."),
+    'change_addr': ("-c", "--change",
+                    "Change address. Default is a spare address, or the source address if it's not in the wallet"),
+    'nbits': (None, "--nbits", "Number of bits of entropy"),
+    'entropy': (None, "--entropy", "Custom entropy"),
+    'language': ("-L", "--lang", "Default language for wordlist"),
+    'gap_limit': ("-G", "--gap", "Gap limit"),
+    'privkey': (None, "--privkey", "Private key. Set to '?' to get a prompt."),
+    'unsigned': ("-u", "--unsigned", "Do not sign transaction"),
+    'domain': ("-D", "--domain", "List of addresses"),
+    'account': (None, "--account", "Account"),
+    'memo': ("-m", "--memo", "Description of the request"),
+    'expiration': (None, "--expiration", "Time in seconds"),
+    'force': (
+    None, "--force", "Create new address beyong gap limit, if no more address is available."),
+    'pending': (None, "--pending", "Show only pending requests."),
+    'expired': (None, "--expired", "Show only expired requests."),
+    'paid': (None, "--paid", "Show only paid requests."),
+    'exclude_claimtrietx': (None, "--exclude_claimtrietx", "Exclude claimtrie transactions"),
+    'return_addr': (None, "--return_addr",
+                    "Return address where amounts in abandoned claimtrie transactions are returned."),
+    'claim_addr': (None, "--claim_addr", "Address where claims are sent."),
+    'broadcast': (None, "--broadcast", "if True, broadcast the transaction"),
+    'raw': ("-r", "--raw", "if True, don't decode claim values"),
+    'page': ("-p", "--page", "page number"),
     'page_size': ("-s", "--page_size", "page size"),
     'claim_id': (None, "--claim_id", "claim id"),
     'txid': ("-t", "--txid", "txid"),
     'nout': ("-n", "--nout", "nout"),
-    'certificate_id': (None, "--certificate_id", "claim id of a certificate that can be used for signing"),
-    'skip_validate_schema': (None, "--ignore_schema", "Validate the claim conforms with lbry schema"),
-    'set_default_certificate': (None, "--set_default_certificate", "Set the new certificate as the default, even if there already is one"),
+    'certificate_id': (
+    None, "--certificate_id", "claim id of a certificate that can be used for signing"),
+    'skip_validate_schema': (
+    None, "--ignore_schema", "Validate the claim conforms with lbry schema"),
+    'set_default_certificate': (None, "--set_default_certificate",
+                                "Set the new certificate as the default, even if there already is one"),
     'amount': ("-a", "--amount", "amount to use in updated name claim"),
     'include_abandoned': (None, "--include_abandoned", "include abandoned claims"),
-    'include_supports': (None,"--include_supports", "include supports"),
-    'skip_update_check': (None, "--skip_update_check", "do not check for an existing unspent claim before making a new one"),
+    'include_supports': (None, "--include_supports", "include supports"),
+    'skip_update_check': (None, "--skip_update_check",
+                          "do not check for an existing unspent claim before making a new one"),
     'revoke': (None, "--revoke", "if true, create a new signing key and revoke the old one"),
     'val': (None, '--value', 'claim value'),
-    'timeout':(None,'--timeout','timeout')
+    'timeout': (None, '--timeout', 'timeout')
 }
-
 
 # don't use floats because of rounding errors
 json_loads = lambda x: json.loads(x, parse_float=lambda x: str(Decimal(x)))
@@ -2064,7 +2101,7 @@ arg_types = {
     'inputs': json_loads,
     'outputs': json_loads,
     'tx_fee': lambda x: str(Decimal(x)) if x is not None else None,
-    'amount': lambda x: str(Decimal(x)) if x!='!' else '!',
+    'amount': lambda x: str(Decimal(x)) if x != '!' else '!',
 }
 
 config_variables = {
@@ -2075,10 +2112,11 @@ config_variables = {
         'ssl_chain': 'Chain of SSL certificates, needed for signed requests. Put your certificate at the top and the root CA at the end',
         'url_rewrite': 'Parameters passed to str.replace(), in order to create the r= part of bitcoin: URIs. Example: \"(\'file:///var/www/\',\'https://lbryum.org/\')\"',
     },
-    'listrequests':{
+    'listrequests': {
         'url_rewrite': 'Parameters passed to str.replace(), in order to create the r= part of bitcoin: URIs. Example: \"(\'file:///var/www/\',\'https://lbryum.org/\')\"',
     }
 }
+
 
 def set_default_subparser(self, name, args=None):
     """see http://stackoverflow.com/questions/5176691/argparse-how-to-specify-a-default-subcommand"""
@@ -2101,14 +2139,18 @@ def set_default_subparser(self, name, args=None):
             else:
                 args.insert(0, name)
 
+
 argparse.ArgumentParser.set_default_subparser = set_default_subparser
 
 
-
 def add_network_options(parser):
-    parser.add_argument("-1", "--oneserver", action="store_true", dest="oneserver", default=False, help="connect to one server only")
-    parser.add_argument("-s", "--server", dest="server", default=None, help="set server host:port:protocol, where protocol is either t (tcp) or s (ssl)")
-    parser.add_argument("-p", "--proxy", dest="proxy", default=None, help="set proxy [type:]host[:port], where type is socks4,socks5 or http")
+    parser.add_argument("-1", "--oneserver", action="store_true", dest="oneserver", default=False,
+                        help="connect to one server only")
+    parser.add_argument("-s", "--server", dest="server", default=None,
+                        help="set server host:port:protocol, where protocol is either t (tcp) or s (ssl)")
+    parser.add_argument("-p", "--proxy", dest="proxy", default=None,
+                        help="set proxy [type:]host[:port], where type is socks4,socks5 or http")
+
 
 from util import profiler
 
@@ -2118,8 +2160,10 @@ def get_parser():
     # parent parser, because set_default_subparser removes global options
     parent_parser = argparse.ArgumentParser('parent', add_help=False)
     group = parent_parser.add_argument_group('global options')
-    group.add_argument("-v", "--verbose", action="store_true", dest="verbose", default=False, help="Show debugging information")
-    group.add_argument("-P", "--portable", action="store_true", dest="portable", default=False, help="Use local 'electrum_data' directory")
+    group.add_argument("-v", "--verbose", action="store_true", dest="verbose", default=False,
+                       help="Show debugging information")
+    group.add_argument("-P", "--portable", action="store_true", dest="portable", default=False,
+                       help="Use local 'electrum_data' directory")
     group.add_argument("-w", "--wallet", dest="wallet_path", help="wallet path")
     group.add_argument("-D", "--dir", dest="lbryum_path", help="electrum directory")
     # create main parser
@@ -2128,24 +2172,31 @@ def get_parser():
         epilog="Run 'lbryum help <command>' to see the help for a command")
     subparsers = parser.add_subparsers(dest='cmd', metavar='<command>')
     # gui
-    parser_gui = subparsers.add_parser('gui', parents=[parent_parser], description="Run Electrum's Graphical User Interface.", help="Run GUI (default)")
+    parser_gui = subparsers.add_parser('gui', parents=[parent_parser],
+                                       description="Run Electrum's Graphical User Interface.",
+                                       help="Run GUI (default)")
     parser_gui.add_argument("url", nargs='?', default=None, help="bitcoin URI (or bip70 file)")
-    #parser_gui.set_defaults(func=run_gui)
-    parser_gui.add_argument("-g", "--gui", dest="gui", help="select graphical user interface", choices=['qt', 'kivy', 'text', 'stdio'])
-    parser_gui.add_argument("-o", "--offline", action="store_true", dest="offline", default=False, help="Run offline")
-    parser_gui.add_argument("-m", action="store_true", dest="hide_gui", default=False, help="hide GUI on startup")
-    parser_gui.add_argument("-L", "--lang", dest="language", default=None, help="default language used in GUI")
+    # parser_gui.set_defaults(func=run_gui)
+    parser_gui.add_argument("-g", "--gui", dest="gui", help="select graphical user interface",
+                            choices=['qt', 'kivy', 'text', 'stdio'])
+    parser_gui.add_argument("-o", "--offline", action="store_true", dest="offline", default=False,
+                            help="Run offline")
+    parser_gui.add_argument("-m", action="store_true", dest="hide_gui", default=False,
+                            help="hide GUI on startup")
+    parser_gui.add_argument("-L", "--lang", dest="language", default=None,
+                            help="default language used in GUI")
     add_network_options(parser_gui)
     # daemon
     parser_daemon = subparsers.add_parser('daemon', parents=[parent_parser], help="Run Daemon")
     parser_daemon.add_argument("subcommand", choices=['start', 'status', 'stop'])
-    #parser_daemon.set_defaults(func=run_daemon)
+    # parser_daemon.set_defaults(func=run_daemon)
     add_network_options(parser_daemon)
     # commands
     for cmdname in sorted(known_commands.keys()):
         cmd = known_commands[cmdname]
-        p = subparsers.add_parser(cmdname, parents=[parent_parser], help=cmd.help, description=cmd.description)
-        #p.set_defaults(func=run_cmdline)
+        p = subparsers.add_parser(cmdname, parents=[parent_parser], help=cmd.help,
+                                  description=cmd.description)
+        # p.set_defaults(func=run_cmdline)
         if cmd.requires_password:
             p.add_argument("-W", "--password", dest="password", default=None, help="password")
         for optname, default in zip(cmd.options, cmd.defaults):
@@ -2154,7 +2205,8 @@ def get_parser():
             args = (a, b) if a else (b,)
             if action == 'store':
                 _type = arg_types.get(optname, str)
-                p.add_argument(*args, dest=optname, action=action, default=default, help=help, type=_type)
+                p.add_argument(*args, dest=optname, action=action, default=default, help=help,
+                               type=_type)
             else:
                 p.add_argument(*args, dest=optname, action=action, default=default, help=help)
 
@@ -2165,7 +2217,8 @@ def get_parser():
 
         cvh = config_variables.get(cmdname)
         if cvh:
-            group = p.add_argument_group('configuration variables', '(set with setconfig/getconfig)')
+            group = p.add_argument_group('configuration variables',
+                                         '(set with setconfig/getconfig)')
             for k, v in cvh.items():
                 group.add_argument(k, nargs='?', help=v)
 

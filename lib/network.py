@@ -1,23 +1,21 @@
-import time
 import Queue
-import os
 import errno
-import re
+import logging
+import os
 import random
+import re
 import select
-import traceback
+import socket
+import time
 from collections import defaultdict, deque
 from threading import Lock
 
-import socks
-import socket
-import json
-import logging
-
-import util
 from lbryum import lbrycrd
+
+import socks
+import util
+from blockchain import BLOCKS_PER_CHUNK, get_blockchain
 from interface import Connection, Interface
-from blockchain import get_blockchain, BLOCKS_PER_CHUNK
 from version import LBRYUM_VERSION, PROTOCOL_VERSION
 
 log = logging.getLogger(__name__)
@@ -62,7 +60,8 @@ def parse_servers(result):
                     pruning_level = v[1:]
                 if pruning_level == '': pruning_level = '0'
         try:
-            is_recent = cmp(util.normalize_version(version), util.normalize_version(PROTOCOL_VERSION)) >= 0
+            is_recent = cmp(util.normalize_version(version),
+                            util.normalize_version(PROTOCOL_VERSION)) >= 0
         except Exception:
             is_recent = False
 
@@ -72,7 +71,8 @@ def parse_servers(result):
 
     return servers
 
-def filter_protocol(hostmap, protocol = 's'):
+
+def filter_protocol(hostmap, protocol='s'):
     '''Filters the hostmap for those implementing protocol.
     The result is a list in serialized form.'''
     eligible = []
@@ -84,25 +84,28 @@ def filter_protocol(hostmap, protocol = 's'):
 
 
 # noinspection PyPep8
-def pick_random_server(hostmap, protocol = 't', exclude_set = set()):
+def pick_random_server(hostmap, protocol='t', exclude_set=set()):
     eligible = list(set(filter_protocol(hostmap, protocol)) - exclude_set)
     return random.choice(eligible) if eligible else None
+
 
 from simple_config import SimpleConfig
 
 proxy_modes = ['socks4', 'socks5', 'http']
 
+
 def serialize_proxy(p):
     if type(p) != dict:
         return None
-    return ':'.join([p.get('mode'),p.get('host'), p.get('port')])
+    return ':'.join([p.get('mode'), p.get('host'), p.get('port')])
+
 
 def deserialize_proxy(s):
     if type(s) not in [str, unicode]:
         return None
     if s.lower() == 'none':
         return None
-    proxy = { "mode":"socks5", "host":"localhost" }
+    proxy = {"mode": "socks5", "host": "localhost"}
     args = s.split(':')
     n = 0
     if proxy_modes.count(args[n]) == 1:
@@ -117,11 +120,13 @@ def deserialize_proxy(s):
         proxy["port"] = "8080" if proxy["mode"] == "http" else "1080"
     return proxy
 
+
 def deserialize_server(server_str):
     host, port, protocol = str(server_str).split(':')
     assert protocol in 'st'
-    int(port)    # Throw if cannot be converted to int
+    int(port)  # Throw if cannot be converted to int
     return host, port, protocol
+
 
 def serialize_server(host, port, protocol):
     return str(':'.join([host, port, protocol]))
@@ -166,7 +171,7 @@ class Network(util.DaemonThread):
         self.pending_sends = []
         self.message_id = 0
         self.debug = False
-        self.irc_servers = {} # returned by interface (list from irc)
+        self.irc_servers = {}  # returned by interface (list from irc)
 
         self.banner = ''
         self.fee = None
@@ -184,7 +189,7 @@ class Network(util.DaemonThread):
         # callbacks set by the GUI
         self.callbacks = defaultdict(list)
 
-        dir_path = os.path.join( self.config.path, 'certs')
+        dir_path = os.path.join(self.config.path, 'certs')
         if not os.path.exists(dir_path):
             os.mkdir(dir_path)
 
@@ -310,7 +315,7 @@ class Network(util.DaemonThread):
         '''The interfaces that are in connected state'''
         return self.interfaces.keys()
 
-    #Do an initial pruning of lbryum servers that don't have the specified port open
+    # Do an initial pruning of lbryum servers that don't have the specified port open
     def _set_online_servers(self):
         servers = self.config.get('default_servers', {}).iteritems()
         self.online_servers = {
@@ -352,7 +357,8 @@ class Network(util.DaemonThread):
             socks.setdefaultproxy(proxy_mode, proxy["host"], int(proxy["port"]))
             socket.socket = socks.socksocket
             # prevent dns leaks, see http://stackoverflow.com/questions/13184205/dns-over-proxy
-            socket.getaddrinfo = lambda *args: [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (args[0], args[1]))]
+            socket.getaddrinfo = lambda *args: [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, '', (args[0], args[1]))]
         else:
             socket.socket = socket._socketobject
             socket.getaddrinfo = socket._socket.getaddrinfo
@@ -399,13 +405,13 @@ class Network(util.DaemonThread):
 
     def switch_to_random_interface(self):
         '''Switch to a random connected server other than the current one'''
-        servers = self.get_interfaces()    # Those in connected state
+        servers = self.get_interfaces()  # Those in connected state
         if self.default_server in servers:
             servers.remove(self.default_server)
         if servers:
             self.switch_to_interface(random.choice(servers))
 
-    def switch_lagging_interface(self, suggestion = None):
+    def switch_lagging_interface(self, suggestion=None):
         '''If auto_connect and lagging, switch interface'''
         if self.server_is_lagging() and self.auto_connect:
             if suggestion and self.protocol == deserialize_server(suggestion)[2]:
@@ -636,7 +642,6 @@ class Network(util.DaemonThread):
         data['chunk_idx'] = idx
         data['req_time'] = time.time()
 
-
     def _caught_up_to_interface(self, data):
         return self.get_local_height() >= data['if_height']
 
@@ -754,7 +759,7 @@ class Network(util.DaemonThread):
             self.maintain_sockets()
             self.wait_on_sockets()
             self.handle_bc_requests()
-            self.run_jobs()    # Synchronizer and Verifier
+            self.run_jobs()  # Synchronizer and Verifier
             self.process_pending_sends()
 
         log.info('Stopping network')
@@ -800,7 +805,7 @@ class Network(util.DaemonThread):
         try:
             r = queue.get(True, timeout)
         except Queue.Empty:
-            msg='Failed to get response from server within timeout of {}'.format(timeout)
+            msg = 'Failed to get response from server within timeout of {}'.format(timeout)
             raise BaseException(msg)
         if r.get('error'):
             raise BaseException(r.get('error'))

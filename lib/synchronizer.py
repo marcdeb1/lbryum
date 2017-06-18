@@ -21,7 +21,7 @@ from threading import Lock
 
 from lbrycrd import Hash, hash_encode
 from transaction import Transaction
-from util import print_error, print_msg, ThreadJob
+from util import ThreadJob
 
 
 class Synchronizer(ThreadJob):
@@ -81,7 +81,8 @@ class Synchronizer(ThreadJob):
         if self.wallet.get_status(history) != result:
             if self.requested_histories.get(addr) is None:
                 self.requested_histories[addr] = result
-                self.network.send([('blockchain.address.get_history', [addr])], self.addr_history_response)
+                self.network.send([('blockchain.address.get_history', [addr])],
+                                  self.addr_history_response)
 
         # remove addr from list only after it is added to requested_histories
         if addr in self.requested_addrs:  # Notifications won't be in
@@ -97,11 +98,11 @@ class Synchronizer(ThreadJob):
         hashes = set(map(lambda item: item['tx_hash'], result))
         hist = map(lambda item: (item['tx_hash'], item['height']), result)
         # Note if the server hasn't been patched to sort the items properly
-        if hist != sorted(hist, key=lambda x:x[1]):
+        if hist != sorted(hist, key=lambda x: x[1]):
             self.network.interface.print_error("serving improperly sorted address histories")
         # Check that txids are unique
         if len(hashes) != len(result):
-            self.print_error("error: server history has non-unique txids: %s"% addr)
+            self.print_error("error: server history has non-unique txids: %s" % addr)
         # Check that the status corresponds to what was announced
         elif self.wallet.get_status(hist) != server_status:
             self.print_error("error: status mismatch: %s" % addr)
@@ -133,7 +134,6 @@ class Synchronizer(ThreadJob):
         self.network.trigger_callback('new_transaction', tx)
         if not self.requested_tx:
             self.network.trigger_callback('updated')
-
 
     def request_missing_txs(self, hist):
         # "hist" is a list of [tx_hash, tx_height] lists

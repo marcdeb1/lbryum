@@ -1,6 +1,6 @@
 import binascii
+
 from lbrycrd import Hash
-from transaction import opcodes
 
 
 class InvalidProofError(Exception):

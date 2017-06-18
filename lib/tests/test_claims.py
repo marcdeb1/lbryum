@@ -1,5 +1,5 @@
 import unittest
-import binascii
+
 from lib import claims
 
 

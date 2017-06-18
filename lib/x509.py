@@ -17,39 +17,38 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
-from datetime import datetime
-import os
-import sys
-
-import util
-from util import profiler, print_error
-
-from asn1tinydecoder import *
-import ecdsa
 import hashlib
 
+import ecdsa
+
+import util
+from asn1tinydecoder import *
+from util import profiler
 
 # algo OIDs
-ALGO_RSA_SHA1   = '1.2.840.113549.1.1.5'
+ALGO_RSA_SHA1 = '1.2.840.113549.1.1.5'
 ALGO_RSA_SHA256 = '1.2.840.113549.1.1.11'
 ALGO_RSA_SHA384 = '1.2.840.113549.1.1.12'
 ALGO_RSA_SHA512 = '1.2.840.113549.1.1.13'
 ALGO_ECDSA_SHA256 = '1.2.840.10045.4.3.2'
 
 # prefixes, see http://stackoverflow.com/questions/3713774/c-sharp-how-to-calculate-asn-1-der-encoding-of-a-particular-hash-algorithm
-PREFIX_RSA_SHA256 = bytearray([0x30,0x31,0x30,0x0d,0x06,0x09,0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x02,0x01,0x05,0x00,0x04,0x20])
-PREFIX_RSA_SHA384 = bytearray([0x30,0x41,0x30,0x0d,0x06,0x09,0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x02,0x02,0x05,0x00,0x04,0x30])
-PREFIX_RSA_SHA512 = bytearray([0x30,0x51,0x30,0x0d,0x06,0x09,0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x02,0x03,0x05,0x00,0x04,0x40])
+PREFIX_RSA_SHA256 = bytearray(
+    [0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05,
+     0x00, 0x04, 0x20])
+PREFIX_RSA_SHA384 = bytearray(
+    [0x30, 0x41, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02, 0x05,
+     0x00, 0x04, 0x30])
+PREFIX_RSA_SHA512 = bytearray(
+    [0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03, 0x05,
+     0x00, 0x04, 0x40])
 
 
 class CertificateError(Exception):
     pass
 
 
-
-
 class X509(object):
-
     def __init__(self, b):
 
         self.bytes = bytearray(b)
@@ -81,7 +80,7 @@ class X509(object):
         validity = asn1_node_next(der, issuer)
         ii = asn1_node_first_child(der, validity)
         self.notBefore = asn1_get_value_of_type(der, ii, 'UTCTime')
-        ii = asn1_node_next(der,ii)
+        ii = asn1_node_next(der, ii)
         self.notAfter = asn1_get_value_of_type(der, ii, 'UTCTime')
 
         # subject
@@ -165,9 +164,6 @@ class X509(object):
 
     def getFingerprint(self):
         return hashlib.sha1(self.bytes).digest()
-
-
-
 
 
 @profiler

@@ -1,15 +1,13 @@
-import sys
 import re
+
 import dns
 
-import lbrycrd
 import dnssec
-from util import StoreDict, print_error
-from i18n import _
+import lbrycrd
+from util import StoreDict
 
 
 class Contacts(StoreDict):
-
     def __init__(self, config):
         StoreDict.__init__(self, config, 'contacts')
 
@@ -59,4 +57,3 @@ class Contacts(StoreDict):
             return regex.search(haystack).groups()[0]
         except AttributeError:
             return None
-

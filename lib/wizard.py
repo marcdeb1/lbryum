@@ -16,16 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from wallet import WalletStorage
+from i18n import _
 from util import PrintError
 from wallet import Wallet, wallet_types
-from i18n import _
 
 MSG_GENERATING_WAIT = _("Electrum is generating your addresses, please wait...")
 MSG_ENTER_ANYTHING = _("Please enter a seed phrase, a master key, a list of "
                        "Bitcoin addresses, or a list of private keys")
 MSG_ENTER_SEED_OR_MPK = _("Please enter a seed phrase or a master key (xpub or xprv):")
-MSG_VERIFY_SEED = _("Your seed is important!\nTo make sure that you have properly saved your seed, please retype it here.")
+MSG_VERIFY_SEED = _(
+    "Your seed is important!\nTo make sure that you have properly saved your seed, please retype it here.")
 MSG_COSIGNER = _("Please enter the master public key of cosigner #%d:")
 MSG_SHOW_MPK = _("Here is your master public key:")
 MSG_ENTER_PASSWORD = _("Choose a password to encrypt your wallet keys.  "
@@ -35,17 +35,19 @@ MSG_RESTORE_PASSPHRASE = \
       "Note this is NOT a password.  Enter nothing if you did not use "
       "one or are unsure.")
 
+
 class UserCancelled(Exception):
     pass
+
 
 class WizardBase(PrintError):
     '''Base class for gui-specific install wizards.'''
     user_actions = ('create', 'restore')
     wallet_kinds = [
-        ('standard',  _("Standard wallet")),
+        ('standard', _("Standard wallet")),
         ('twofactor', _("Wallet with two-factor authentication")),
-        ('multisig',  _("Multi-signature wallet")),
-        ('hardware',  _("Hardware wallet")),
+        ('multisig', _("Multi-signature wallet")),
+        ('hardware', _("Hardware wallet")),
     ]
 
     # Derived classes must set:
@@ -186,7 +188,7 @@ class WizardBase(PrintError):
         calls = []
         if hasattr(wallet, 'plugin'):
             calls.append((wallet.plugin, (wallet, self)))
-        calls.extend([(wallet, ()), (self, (wallet, ))])
+        calls.extend([(wallet, ()), (self, (wallet,))])
         calls = [(getattr(actor, action), args) for (actor, args) in calls
                  if hasattr(actor, action)]
         if not calls:

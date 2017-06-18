@@ -16,13 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import struct
 from collections import defaultdict, namedtuple
 from math import floor, log10
-import struct
 
-from lbrycrd import sha256, COIN, TYPE_ADDRESS
+from lbrycrd import COIN, TYPE_ADDRESS, sha256
 from transaction import Transaction
-from util import NotEnoughFunds, PrintError, profiler
+from util import NotEnoughFunds, PrintError
 
 
 # A simple deterministic PRNG.  Used to deterministically shuffle a
