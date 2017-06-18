@@ -1,15 +1,17 @@
-import json
 import logging
 import os
 import re
 import sys
 import threading
 import traceback
-import urllib
-import urlparse
 from collections import defaultdict
-from datetime import datetime
 from decimal import Decimal
+import socket
+import errno
+import json
+import ssl
+import time
+import Queue
 
 from i18n import _
 
@@ -22,7 +24,8 @@ def normalize_version(v):
     return [int(x) for x in re.sub(r'(\.0+)*$', '', v).split(".")]
 
 
-class NotEnoughFunds(Exception): pass
+class NotEnoughFunds(Exception):
+    pass
 
 
 class InvalidPassword(Exception):
@@ -149,7 +152,8 @@ def set_verbosity(b):
 
 
 def print_error(*args):
-    if not is_verbose: return
+    if not is_verbose:
+        return
     print_stderr(*args)
 
 
@@ -164,14 +168,6 @@ def print_msg(*args):
     args = [str(item) for item in args]
     sys.stdout.write(" ".join(args) + "\n")
     sys.stdout.flush()
-
-
-def json_encode(obj):
-    try:
-        s = json.dumps(obj, sort_keys=True, indent=4, cls=MyEncoder)
-    except TypeError:
-        s = repr(obj)
-    return s
 
 
 def json_decode(x):
@@ -249,15 +245,8 @@ def parse_json(message):
     return j, message[n + 1:]
 
 
-class timeout(Exception):
+class Timeout(Exception):
     pass
-
-
-import socket
-import errno
-import json
-import ssl
-import time
 
 
 class SocketPipe:
@@ -281,16 +270,16 @@ class SocketPipe:
             try:
                 data = self.socket.recv(1024)
             except socket.timeout:
-                raise timeout
+                raise Timeout
             except ssl.SSLError:
-                raise timeout
+                raise Timeout
             except socket.error, err:
                 if err.errno == 60:
-                    raise timeout
+                    raise Timeout
                 elif err.errno in [11, 35, 10035]:
                     # print_error("socket errno %d (resource temporarily unavailable)"% err.errno)
                     time.sleep(0.05)
-                    raise timeout
+                    raise Timeout
                 else:
                     print_error("pipe: socket error", err)
                     data = ''
@@ -334,9 +323,6 @@ class SocketPipe:
                     raise e
 
 
-import Queue
-
-
 class QueuePipe:
     def __init__(self, send_queue=None, get_queue=None):
         self.send_queue = send_queue if send_queue else Queue.Queue()
@@ -347,7 +333,7 @@ class QueuePipe:
         try:
             return self.get_queue.get(timeout=self.timeout)
         except Queue.Empty:
-            raise timeout
+            raise Timeout
 
     def get_all(self):
         responses = []

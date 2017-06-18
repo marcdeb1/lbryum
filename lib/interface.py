@@ -313,7 +313,7 @@ class Interface(util.PrintError):
         while True:
             try:
                 response = self.pipe.get()
-            except util.timeout:
+            except util.Timeout:
                 break
             if response is None:
                 responses.append((None, None))
