@@ -1,8 +1,8 @@
 import re
-import dns
 
-import lbrycrd
-from util import StoreDict
+import dns
+from lbryum import lbrycrd
+from lbryum.util import StoreDict
 
 
 class Contacts(StoreDict):

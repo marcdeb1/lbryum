@@ -1,19 +1,18 @@
+import errno
+import json
 import logging
 import os
 import re
+import socket
+import ssl
 import sys
 import threading
+import time
 import traceback
 from collections import defaultdict
 from decimal import Decimal
-import socket
-import errno
-import json
-import ssl
-import time
-import Queue
 
-from i18n import _
+from lbryum.i18n import _
 
 log = logging.getLogger("lbryum")
 

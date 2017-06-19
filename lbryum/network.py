@@ -10,13 +10,14 @@ import time
 from collections import defaultdict, deque
 from threading import Lock
 
-from lbryum import lbrycrd
-
 import socks
 import util
-from blockchain import BLOCKS_PER_CHUNK, get_blockchain
-from interface import Connection, Interface
-from version import LBRYUM_VERSION, PROTOCOL_VERSION
+from lbryum import __version__ as LBRYUM_VERSION
+from lbryum import lbrycrd
+from lbryum.blockchain import BLOCKS_PER_CHUNK, get_blockchain
+from lbryum.interface import Connection, Interface
+from lbryum.simple_config import SimpleConfig
+from lbryum.version import PROTOCOL_VERSION
 
 log = logging.getLogger(__name__)
 
@@ -52,13 +53,15 @@ def parse_servers(result):
             for v in item[2]:
                 if re.match("[stgh]\d*", v):
                     protocol, port = v[0], v[1:]
-                    if port == '': port = DEFAULT_PORTS[protocol]
+                    if port == '':
+                        port = DEFAULT_PORTS[protocol]
                     out[protocol] = port
                 elif re.match("v(.?)+", v):
                     version = v[1:]
                 elif re.match("p\d*", v):
                     pruning_level = v[1:]
-                if pruning_level == '': pruning_level = '0'
+                if pruning_level == '':
+                    pruning_level = '0'
         try:
             is_recent = cmp(util.normalize_version(version),
                             util.normalize_version(PROTOCOL_VERSION)) >= 0
@@ -73,8 +76,8 @@ def parse_servers(result):
 
 
 def filter_protocol(hostmap, protocol='s'):
-    '''Filters the hostmap for those implementing protocol.
-    The result is a list in serialized form.'''
+    """Filters the hostmap for those implementing protocol.
+    The result is a list in serialized form."""
     eligible = []
     for host, portmap in hostmap.items():
         port = portmap.get(protocol)
@@ -88,8 +91,6 @@ def pick_random_server(hostmap, protocol='t', exclude_set=set()):
     eligible = list(set(filter_protocol(hostmap, protocol)) - exclude_set)
     return random.choice(eligible) if eligible else None
 
-
-from simple_config import SimpleConfig
 
 proxy_modes = ['socks4', 'socks5', 'http']
 
@@ -149,7 +150,7 @@ class Network(util.DaemonThread):
         if config is None:
             config = {}  # Do not use mutables as default values!
         util.DaemonThread.__init__(self)
-        self.config = SimpleConfig(config) if type(config) == type({}) else config
+        self.config = SimpleConfig(config) if isinstance(config, dict) else config
         self.num_server = 8 if not self.config.get('oneserver') else 0
         self.blockchain = get_blockchain(self.config, self)
         # A deque of interface header requests, processed left-to-right
@@ -312,7 +313,7 @@ class Network(util.DaemonThread):
         return host, port, protocol, self.proxy, self.auto_connect
 
     def get_interfaces(self):
-        '''The interfaces that are in connected state'''
+        """The interfaces that are in connected state"""
         return self.interfaces.keys()
 
     # Do an initial pruning of lbryum servers that don't have the specified port open
@@ -331,7 +332,7 @@ class Network(util.DaemonThread):
         return out
 
     def start_interface(self, server):
-        if not server in self.interfaces and not server in self.connecting:
+        if server not in self.interfaces and server not in self.connecting:
             if server == self.default_server:
                 log.info("connecting to %s as new interface", server)
                 self.set_status('connecting')
@@ -487,7 +488,7 @@ class Network(util.DaemonThread):
 
     def get_index(self, method, params):
         """ hashable index for subscriptions and cache"""
-        return str(method) + (':' + str(params[0]) if params  else '')
+        return str(method) + (':' + str(params[0]) if params else '')
 
     def process_responses(self, interface):
         responses = interface.get_responses()
@@ -649,7 +650,7 @@ class Network(util.DaemonThread):
         return self.get_local_height() + BLOCKS_PER_CHUNK <= data['if_height']
 
     def on_get_chunk(self, interface, response):
-        '''Handle receiving a chunk of block headers'''
+        """Handle receiving a chunk of block headers"""
         if self.bc_requests:
             req_if, data = self.bc_requests[0]
             req_idx = data.get('chunk_idx')
@@ -669,11 +670,11 @@ class Network(util.DaemonThread):
         self.queue_request('blockchain.block.get_header', [height], interface)
         data['header_height'] = height
         data['req_time'] = time.time()
-        if not 'chain' in data:
+        if 'chain' not in data:
             data['chain'] = []
 
     def on_get_header(self, interface, response):
-        '''Handle receiving a single block header'''
+        """Handle receiving a single block header"""
         if self.bc_requests:
             req_if, data = self.bc_requests[0]
             req_height = data.get('header_height', -1)
@@ -695,9 +696,9 @@ class Network(util.DaemonThread):
                     self.request_header(interface, data, next_height)
 
     def bc_request_headers(self, interface, data):
-        '''Send a request for the next header, or a chunk of them,
+        """Send a request for the next header, or a chunk of them,
         if necessary.
-        '''
+        """
         local_height, if_height = self.get_local_height(), data['if_height']
         if if_height < local_height:
             return False
@@ -708,13 +709,13 @@ class Network(util.DaemonThread):
         return True
 
     def handle_bc_requests(self):
-        '''Work through each interface that has notified us of a new header.
+        """Work through each interface that has notified us of a new header.
         Send it requests if it is ahead of our blockchain object.
-        '''
+        """
         while self.bc_requests:
             interface, data = self.bc_requests.popleft()
             # If the connection was lost move on
-            if not interface in self.interfaces.values():
+            if interface not in self.interfaces.values():
                 continue
 
             req_time = data.get('req_time')

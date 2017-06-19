@@ -1,71 +1,19 @@
-#!/usr/bin/env python2
-# -*- mode: python -*-
-#
-# Electrum - lightweight Bitcoin client
-# Copyright (C) 2011 thomasv@gitorious
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-
+import json
+import logging
 import os
 import sys
 
+import requests
+from lbryum.commands import Commands, config_variables, get_parser, known_commands
+from lbryum.daemon import Daemon, get_daemon
+from lbryum.network import Network, SimpleConfig
+from lbryum.util import InvalidPassword, json_decode
+from lbryum.wallet import Wallet, WalletStorage
+
+log = logging.getLogger(__name__)
+
 script_dir = os.path.dirname(os.path.realpath(__file__))
 is_bundle = getattr(sys, 'frozen', False)
-is_local = not is_bundle and os.path.exists(os.path.join(script_dir, "setup-release.py"))
-is_android = 'ANDROID_DATA' in os.environ
-is_kivy = os.environ.get('PYTHONHOME', '').find('kivy') != -1
-
-if is_local or is_android:
-    sys.path.insert(0, os.path.join(script_dir, 'packages'))
-elif is_bundle and sys.platform == 'darwin':
-    sys.path.insert(0, os.getcwd() + "/lib/python2.7/packages")
-
-# pure-python dependencies need to be imported here for pyinstaller
-try:
-    import dns
-    import aes
-    import ecdsa
-    import requests
-    import six
-    import qrcode
-    import pbkdf2
-    import google.protobuf
-except ImportError as e:
-    sys.exit("Error: %s. Try 'sudo pip install <module-name>'" % e.message)
-
-# the following imports are for pyinstaller
-
-
-# check that we have the correct version of ecdsa
-try:
-    from ecdsa.ecdsa import curve_secp256k1, generator_secp256k1
-except Exception:
-    sys.exit(
-        "cannot import ecdsa.curve_secp256k1. You probably need to upgrade ecdsa.\nTry: sudo pip install --upgrade ecdsa")
-
-# load local module as lbryum
-if is_bundle or is_local or is_android:
-    import imp
-
-    imp.load_module('lbryum', *imp.find_module('lib'))
-
-from lbryum import util
-from lbryum import SimpleConfig, Network, Wallet, WalletStorage
-from lbryum.util import print_msg, print_stderr, json_encode, json_decode, set_verbosity
-from lbryum.util import InvalidPassword
-from lbryum.commands import get_parser, known_commands, Commands, config_variables
-from lbryum.daemon import Daemon, get_daemon
 
 
 # get password routine
@@ -103,14 +51,13 @@ def run_non_RPC(config):
             network = Network(config)
             network.start()
             wallet.start_threads(network)
-            print_msg("Recovering wallet...")
+            log.info("Recovering wallet...")
             wallet.synchronize()
             wallet.wait_until_synchronized()
             msg = "Recovery successful" if wallet.is_found() else "Found no history for this wallet"
         else:
             msg = "This wallet was restored offline. It may contain more addresses than displayed."
-        print_msg(msg)
-
+        log.info(msg)
     elif cmdname == 'create':
         password = password_dialog()
         wallet = Wallet(storage)
@@ -119,17 +66,17 @@ def run_non_RPC(config):
         wallet.create_master_keys(password)
         wallet.create_main_account()
         wallet.synchronize()
-        print_msg("Your wallet generation seed is:\n\"%s\"" % seed)
-        print_msg(
-            "Please keep it in a safe place; if you lose it, you will not be able to restore your wallet.")
-
+        print "Your wallet generation seed is:\n\"%s\"" % seed
+        print "Please keep it in a safe place; if you lose it, you will not be able to restore " \
+              "your wallet."
     elif cmdname == 'deseed':
+        wallet = Wallet(storage)
         if not wallet.seed:
-            print_msg("Error: This wallet has no seed")
+            log.info("Error: This wallet has no seed")
         else:
             ns = wallet.storage.path + '.seedless'
-            print_msg(
-                "Warning: you are going to create a seedless wallet'\nIt will be saved in '%s'" % ns)
+            print "Warning: you are going to create a seedless wallet'\n" \
+                  "It will be saved in '%s'" % ns
             if raw_input("Are you sure you want to continue? (y/n) ") in ['y', 'Y', 'yes']:
                 wallet.storage.path = ns
                 wallet.seed = ''
@@ -139,15 +86,14 @@ def run_non_RPC(config):
                 for k in wallet.imported_keys.keys():
                     wallet.imported_keys[k] = ''
                 wallet.storage.put('imported_keys', wallet.imported_keys)
-                print_msg("Done.")
+                print "Done."
             else:
-                print_msg("Action canceled.")
+                print "Action canceled."
         wallet.storage.write()
-        sys.exit(0)
-
+    else:
+        raise Exception("Unknown command %s" % cmdname)
     wallet.storage.write()
-    print_msg("Wallet saved in '%s'" % wallet.storage.path)
-    sys.exit(0)
+    log.info("Wallet saved in '%s'", wallet.storage.path)
 
 
 def init_cmdline(config_options):
@@ -173,17 +119,16 @@ def init_cmdline(config_options):
     storage = WalletStorage(config.get_wallet_path())
 
     if cmd.requires_wallet and not storage.file_exists:
-        print_msg("Error: Wallet file not found.")
-        print_msg(
-            "Type 'lbryum create' to create a new wallet, or provide a path to a wallet with the -w option")
+        log.error("Error: Wallet file not found.")
+        print "Type 'lbryum create' to create a new wallet, or provide a path to a wallet with " \
+              "the -w option"
         sys.exit(0)
 
     # important warning
     if cmd.name in ['getprivatekeys']:
-        print_stderr("WARNING: ALL your private keys are secret.")
-        print_stderr("Exposing a single private key can compromise your entire wallet!")
-        print_stderr(
-            "In particular, DO NOT use 'redeem private key' services proposed by third parties.")
+        print "WARNING: ALL your private keys are secret."
+        print "Exposing a single private key can compromise your entire wallet!"
+        print "In particular, DO NOT use 'redeem private key' services proposed by third parties."
 
     # commands needing password
     if cmd.requires_password and storage.get('use_encryption'):
@@ -192,7 +137,7 @@ def init_cmdline(config_options):
         else:
             password = prompt_password('Password:', False)
             if not password:
-                print_msg("Error: Password required")
+                print "Error: Password required"
                 sys.exit(1)
     else:
         password = None
@@ -217,10 +162,10 @@ def run_offline_command(config, config_options):
         try:
             seed = wallet.check_password(password)
         except InvalidPassword:
-            print_msg("Error: This password does not decode this wallet.")
+            print "Error: This password does not decode this wallet."
             sys.exit(1)
     if cmd.requires_network:
-        print_stderr("Warning: running command offline")
+        print "Warning: running command offline"
     # arguments passed to function
     args = map(lambda x: config.get(x), cmd.params)
     # decode json arguments
@@ -238,8 +183,7 @@ def run_offline_command(config, config_options):
     return result
 
 
-if __name__ == '__main__':
-
+def main():
     # make sure that certificates are here
     assert os.path.exists(requests.utils.DEFAULT_CA_BUNDLE_PATH)
 
@@ -269,32 +213,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # config is an object passed to the various constructors (wallet, interface, gui)
-    if is_android:
-        config_options = {
-            'verbose': True,
-            # 'auto_connect': True,
-        }
-    else:
-        config_options = args.__dict__
-        for k, v in config_options.items():
-            if v is None or (k in config_variables.get(args.cmd, {}).keys()):
-                config_options.pop(k)
-        if config_options.get('server'):
-            config_options['auto_connect'] = False
-
-    if config_options.get('portable'):
-        config_options['electrum_path'] = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                                       'electrum_data')
-
-    set_verbosity(config_options.get('verbose'))
-
-    # check uri
-    uri = config_options.get('url')
-    if uri:
-        if not uri.startswith('bitcoin:'):
-            print_stderr('unknown command:', uri)
-            sys.exit(1)
-        config_options['url'] = uri
+    config_options = args.__dict__
+    for k, v in config_options.items():
+        if v is None or (k in config_variables.get(args.cmd, {}).keys()):
+            config_options.pop(k)
+    if config_options.get('server'):
+        config_options['auto_connect'] = False
 
     config = SimpleConfig(config_options)
     cmdname = config.get('cmd')
@@ -313,7 +237,7 @@ if __name__ == '__main__':
         else:
             subcommand = config.get('subcommand')
             if subcommand in ['status', 'stop']:
-                print_msg("Daemon not running")
+                print "Daemon not running"
                 sys.exit(1)
             elif subcommand == 'start':
                 p = os.fork()
@@ -321,20 +245,14 @@ if __name__ == '__main__':
                     network = Network(config)
                     network.start()
                     daemon = Daemon(config, network)
-                    if config.get('websocket_server'):
-                        from lbryum import websockets
-
-                        websockets.WebSocketServer(config, network).start()
-                    if config.get('requests_dir'):
-                        util.check_www_dir(config.get('requests_dir'))
                     daemon.start()
                     daemon.join()
                     sys.exit(0)
                 else:
-                    print_stderr("starting daemon (PID %d)" % p)
+                    print "starting daemon (PID %d)" % p
                     sys.exit(0)
             else:
-                print_msg("syntax: lbryum daemon <start|status|stop>")
+                print "syntax: lbryum daemon <start|status|stop>"
                 sys.exit(1)
 
     else:
@@ -345,11 +263,14 @@ if __name__ == '__main__':
         else:
             cmd = known_commands[cmdname]
             if cmd.requires_network:
-                print_msg("Network daemon is not running. Try 'lbryum daemon start'")
+                print "Network daemon is not running. Try 'lbryum daemon start'"
                 sys.exit(1)
             else:
                 result = run_offline_command(config, config_options)
 
-    # print result
-    print_msg(json_encode(result))
+    print json.dumps(result, indent=2)
     sys.exit(0)
+
+
+if __name__ == '__main__':
+    main()

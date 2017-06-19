@@ -17,8 +17,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
-from lbrycrd import *
-from util import ThreadJob
+from lbryum.lbrycrd import *
+from lbryum.util import ThreadJob
 
 
 class SPV(ThreadJob):

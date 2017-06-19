@@ -1,34 +1,10 @@
-#!/usr/bin/env python
-#
-# Electrum - lightweight Bitcoin client
-# Copyright (C) 2011 thomasv@gitorious
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-
-# Note: The deserialization code originally comes from ABE.
-
-
-#
-# Workalike python implementation of Bitcoin's CDataStream class.
-#
-import struct
 import sys
+import types
+import exceptions
 
-import lbrycrd
-from lbrycrd import *
-from util import print_error, profiler
+from lbryum import lbrycrd
+from lbryum.lbrycrd import *
+from lbryum.util import print_error, profiler
 
 NO_SIGNATURE = 'ff'
 
@@ -163,15 +139,11 @@ class BCDataStream(object):
         self.write(s)
 
 
-#
-# enum-like type
-# From the Python Cookbook, downloaded from http://code.activestate.com/recipes/67107/
-#
-import types, exceptions
-
-
 class EnumException(exceptions.Exception):
     pass
+
+# enum-like type
+# From the Python Cookbook, downloaded from http://code.activestate.com/recipes/67107/
 
 
 class Enumeration:
@@ -289,7 +261,8 @@ def script_GetOpName(opcode):
 def decode_script(bytes):
     result = ''
     for (opcode, vch, i) in script_GetOp(bytes):
-        if len(result) > 0: result += " "
+        if len(result) > 0:
+            result += " "
         if opcode <= opcodes.OP_PUSHDATA4:
             result += "%d:" % (opcode,)
             result += short_hex(vch)
@@ -300,10 +273,11 @@ def decode_script(bytes):
 
 def match_decoded(decoded, to_match):
     if len(decoded) != len(to_match):
-        return False;
+        return False
     for i in range(len(decoded)):
         if to_match[i] == opcodes.OP_PUSHDATA4 and opcodes.OP_PUSHDATA4 >= decoded[i][0] > 0:
-            continue  # Opcodes below OP_PUSHDATA4 all just push data onto stack, and are equivalent.
+            # Opcodes below OP_PUSHDATA4 all just push data onto stack, # and are equivalent.
+            continue
         if to_match[i] != decoded[i][0]:
             return False
     return True
@@ -1000,7 +974,7 @@ class Transaction:
 
     def has_address(self, addr):
         return (addr in self.get_output_addresses()) or (
-        addr in (tx.get("address") for tx in self.inputs()))
+            addr in (tx.get("address") for tx in self.inputs()))
 
     def as_dict(self):
         if self.raw is None:

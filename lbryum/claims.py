@@ -1,6 +1,6 @@
 import binascii
 
-from lbrycrd import Hash
+from lbryum.lbrycrd import Hash
 
 
 class InvalidProofError(Exception):

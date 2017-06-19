@@ -1,38 +1,22 @@
-#!/usr/bin/env python
-#
-# Electrum - lightweight Bitcoin client
-# Copyright (C) 2015 kyuupichan@gmail
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-
 import struct
 from collections import defaultdict, namedtuple
 from math import floor, log10
 
-from lbrycrd import COIN, TYPE_ADDRESS, sha256
-from transaction import Transaction
-from util import NotEnoughFunds, PrintError
+from lbryum.lbrycrd import COIN, TYPE_ADDRESS, sha256
+from lbryum.transaction import Transaction
+from lbryum.util import NotEnoughFunds, PrintError
 
 
-# A simple deterministic PRNG.  Used to deterministically shuffle a
-# set of coins - the same set of coins should produce the same output.
-# Although choosing UTXOs "randomly" we want it to be deterministic,
-# so if sending twice from the same UTXO set we choose the same UTXOs
-# to spend.  This prevents attacks on users by malicious or stale
-# servers.
+class PRNG(object):
+    """
+    A simple deterministic PRNG.  Used to deterministically shuffle a
+    set of coins - the same set of coins should produce the same output.
+    Although choosing UTXOs "randomly" we want it to be deterministic,
+    so if sending twice from the same UTXO set we choose the same UTXOs
+    to spend.  This prevents attacks on users by malicious or stale
+    servers.
+    """
 
-class PRNG:
     def __init__(self, seed):
         self.sha = sha256(seed)
         self.pool = bytearray()
@@ -206,7 +190,9 @@ class CoinChooserBase(PrintError):
 
         # This takes a count of change outputs and returns a tx fee;
         # each pay-to-bitcoin-address output serializes as 34 bytes
-        fee = lambda count: fee_estimator(tx_size + count * 34)
+        def fee(count):
+            return fee_estimator(tx_size + count * 34)
+
         change = self.change_outputs(tx, change_addrs, fee, dust_threshold)
         tx.add_outputs(change)
 
@@ -230,7 +216,9 @@ class CoinChooserOldestFirst(CoinChooserBase):
     def choose_buckets(self, buckets, sufficient_funds, penalty_func):
         '''Spend the oldest buckets first.'''
         # Unconfirmed coins are young, not old
-        adj_height = lambda height: 99999999 if height == 0 else height
+        def adj_height(height):
+            return 99999999 if height == 0 else height
+
         buckets.sort(key=lambda b: max(adj_height(coin['height'])
                                        for coin in b.coins))
         selected = []

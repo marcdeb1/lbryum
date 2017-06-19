@@ -1,28 +1,8 @@
-#!/usr/bin/env python
-#
-# Electrum - lightweight Bitcoin client
-# Copyright (C) 2012 thomasv@ecdsa.org
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-
 import os
 
-from lbryum import lbrycrd
+from lbryum import lbrycrd, util
+from lbryum.lbrycrd import hex_to_int
 from lbryum.networks import blockchain_params
-
-import util
 
 NULL_HASH = '0000000000000000000000000000000000000000000000000000000000000000'
 HEADER_SIZE = 112
@@ -126,7 +106,6 @@ class LbryCrd(util.PrintError):
         return s
 
     def deserialize_header(self, s):
-        hex_to_int = lambda s: int('0x' + s[::-1].encode('hex'), 16)
         h = {}
         h['version'] = hex_to_int(s[0:4])
         h['prev_block_hash'] = lbrycrd.hash_encode(s[4:36])

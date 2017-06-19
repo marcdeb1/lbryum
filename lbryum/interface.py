@@ -1,33 +1,11 @@
-#!/usr/bin/env python
-#
-# Electrum - lightweight Bitcoin client
-# Copyright (C) 2011 thomasv@gitorious
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-
 import logging
 import os
-import re
 import socket
-import ssl
 import sys
 import threading
 import time
-import traceback
-
 import requests.certs
+from lbryum import util
 
 if getattr(sys, 'frozen', False) and os.name == "nt":
     # When frozen for windows distribution, get the include cert
@@ -35,9 +13,12 @@ if getattr(sys, 'frozen', False) and os.name == "nt":
 else:
     ca_path = requests.certs.where()
 
-import util
-
 log = logging.getLogger(__name__)
+
+
+def make_dict(args):
+    m, p, i = args
+    return {'method': m, 'params': p, 'id': i}
 
 
 def Connection(server, queue, config_path):
@@ -49,7 +30,7 @@ def Connection(server, queue, config_path):
     connection failed.
     """
     host, port, protocol = server.split(':')
-    if not protocol in 'st':
+    if protocol not in 'st':
         raise Exception('Unknown protocol: %s' % protocol)
     c = TcpConnection(server, queue, config_path)
     c.start()
@@ -153,7 +134,6 @@ class Interface(util.PrintError):
 
     def send_requests(self):
         '''Sends all queued requests.  Returns False on failure.'''
-        make_dict = lambda (m, p, i): {'method': m, 'params': p, 'id': i}
         wire_requests = map(make_dict, self.unsent_requests)
         try:
             self.pipe.send_all(wire_requests)
@@ -179,8 +159,8 @@ class Interface(util.PrintError):
 
     def has_timed_out(self):
         '''Returns True if the interface has timed out.'''
-        if (self.unanswered_requests and time.time() - self.request_time > 10
-            and self.pipe.idle_time() > 10):
+        request_time = time.time() - self.request_time
+        if self.unanswered_requests and request_time > 10 and self.pipe.idle_time() > 10:
             self.print_error("timeout", len(self.unanswered_requests))
             return True
 
@@ -229,4 +209,3 @@ def _match_hostname(name, val):
         return True
 
     return val.startswith('*.') and name.endswith(val[1:])
-

@@ -1,21 +1,3 @@
-#!/usr/bin/env python
-#
-# Electrum - lightweight Bitcoin client
-# Copyright (C) 2011 thomasv@gitorious
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-
 import ast
 import copy
 import json
@@ -27,16 +9,15 @@ from decimal import Decimal
 from functools import partial
 from unicodedata import normalize
 
-import lbrycrd
-from account import *
-from coinchooser import COIN_CHOOSERS
-from i18n import _
-from mnemonic import Mnemonic
-from synchronizer import Synchronizer
-from transaction import Transaction
-from util import NotEnoughFunds, PrintError, profiler
-from verifier import SPV
-from version import *
+from lbryum.account import *
+from lbryum.coinchooser import COIN_CHOOSERS
+from lbryum.i18n import _
+from lbryum.mnemonic import Mnemonic
+from lbryum.synchronizer import Synchronizer
+from lbryum.transaction import Transaction
+from lbryum.util import NotEnoughFunds, PrintError, profiler
+from lbryum.verifier import SPV
+from lbryum.version import *
 
 # internal ID for imported account
 IMPORTED_ACCOUNT = '/x'
@@ -182,7 +163,8 @@ class Abstract_Wallet(PrintError):
         # Transactions pending verification.  A map from tx hash to transaction
         # height.  Access is not contended so no lock is needed.
         self.unverified_tx = {}
-        # Verified transactions.  Each value is a (height, timestamp, block_pos) tuple.  Access with self.lock.
+        # Verified transactions.  Each value is a (height, timestamp, block_pos) tuple.
+        # Access with self.lock.
         self.verified_tx = storage.get('verified_tx3', {})
 
         # there is a difference between wallet.up_to_date and interface.is_up_to_date()
@@ -257,7 +239,8 @@ class Abstract_Wallet(PrintError):
             self.storage.write()
 
     def set_default_certificate(self, claim_id, overwrite_existing=True, write=False):
-        if self.default_certificate_claim is not None and overwrite_existing or not self.default_certificate_claim:
+        if self.default_certificate_claim is not None and overwrite_existing or not \
+                self.default_certificate_claim:
             self.storage.put('default_certificate_claim', claim_id)
             if write:
                 self.storage.write()
@@ -363,7 +346,8 @@ class Abstract_Wallet(PrintError):
             self.save_transactions(write=True)
 
     def is_up_to_date(self):
-        with self.lock: return self.up_to_date
+        with self.lock:
+            return self.up_to_date
 
     def is_imported(self, addr):
         account = self.accounts.get(IMPORTED_ACCOUNT)
@@ -432,9 +416,11 @@ class Abstract_Wallet(PrintError):
         return address in self.addresses(True)
 
     def is_change(self, address):
-        if not self.is_mine(address): return False
+        if not self.is_mine(address):
+            return False
         acct, s = self.get_address_index(address)
-        if s is None: return False
+        if s is None:
+            return False
         return s[0] == 1
 
     def get_address_index(self, address):
@@ -487,11 +473,11 @@ class Abstract_Wallet(PrintError):
         self.network.trigger_callback('verified', tx_hash, conf, timestamp)
 
     def get_unverified_txs(self):
-        '''Returns a map from tx hash to transaction height'''
+        """Returns a map from tx hash to transaction height"""
         return self.unverified_tx
 
     def undo_verifications(self, height):
-        '''Used by the verifier when a reorg has happened'''
+        """Used by the verifier when a reorg has happened"""
         txs = []
         with self.lock:
             for tx_hash, item in self.verified_tx:
@@ -511,7 +497,8 @@ class Abstract_Wallet(PrintError):
             if tx in self.verified_tx:
                 height, timestamp, pos = self.verified_tx[tx]
                 conf = (self.get_local_height() - height + 1)
-                if conf <= 0: timestamp = None
+                if conf <= 0:
+                    timestamp = None
             elif tx in self.unverified_tx:
                 conf = -1
                 timestamp = None
@@ -780,7 +767,7 @@ class Abstract_Wallet(PrintError):
         return addr_list
 
     def get_account_from_address(self, addr):
-        "Returns the account that contains this address, or None"
+        """Returns the account that contains this address, or None"""
         for acc_id in self.accounts:  # similar to get_address_index but simpler
             if addr in self.get_account_addresses(acc_id):
                 return acc_id
@@ -825,7 +812,7 @@ class Abstract_Wallet(PrintError):
 
     def add_transaction(self, tx_hash, tx):
         print_error("Adding tx: ", tx_hash)
-        is_coinbase = tx.inputs()[0].get('is_coinbase') == True
+        is_coinbase = True if tx.inputs()[0].get('is_coinbase') else False
         with self.transaction_lock:
             # add inputs
             self.txi[tx_hash] = d = {}
@@ -1077,8 +1064,11 @@ class Abstract_Wallet(PrintError):
         b = config.get('dynamic_fees')
         f = config.get('fee_factor', 50)
         F = config.get('fee_per_kb', lbrycrd.RECOMMENDED_FEE)
-        return min(lbrycrd.RECOMMENDED_FEE, self.network.fee * (
-        50 + f) / 100) if b and self.network and self.network.fee else F
+        if b and self.network and self.network.fee:
+            result = min(lbrycrd.RECOMMENDED_FEE, self.network.fee * (50 + f) / 100)
+        else:
+            result = F
+        return result
 
     def relayfee(self):
         RELAY_FEE = 5000
@@ -1928,7 +1918,8 @@ class Wallet(object):
             if seed_version in [5, 7, 8, 9, 10]:
                 msg += "\n\nTo open this wallet, try 'git checkout seed_v%d'" % seed_version
             if seed_version == 6:
-                # version 1.9.8 created v6 wallets when an incorrect seed was entered in the restore dialog
+                # version 1.9.8 created v6 wallets when an incorrect seed was entered in the
+                # restore dialog
                 msg += '\n\nThis file was created because of a bug in version 1.9.8.'
                 if storage.get('master_public_keys') is None and storage.get(
                         'master_private_keys') is None and storage.get('imported_keys') is None:
@@ -1936,7 +1927,8 @@ class Wallet(object):
                     msg += "\nIt does not contain any keys, and can safely be removed."
                 else:
                     # creation was complete if lbryum was run from source
-                    msg += "\nPlease open this file with Electrum 1.9.8, and move your coins to a new wallet."
+                    msg += "\nPlease open this file with Electrum 1.9.8, and move your coins " \
+                           "to a new wallet."
             raise BaseException(msg)
 
         wallet_type = storage.get('wallet_type')

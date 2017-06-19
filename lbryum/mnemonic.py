@@ -27,10 +27,10 @@ import unicodedata
 import ecdsa
 import pbkdf2
 
-import i18n
-import version
-from lbrycrd import is_new_seed
-from util import print_error
+from lbryum import i18n
+from lbryum import version
+from lbryum.lbrycrd import is_new_seed
+from lbryum.util import print_error
 
 # http://www.asahi-net.or.jp/~ax2s-kmtn/ref/unicode/e_asia.html
 CJK_INTERVALS = [
@@ -69,7 +69,8 @@ CJK_INTERVALS = [
 def is_CJK(c):
     n = ord(c)
     for imin, imax, name in CJK_INTERVALS:
-        if imin <= n <= imax: return True
+        if imin <= n <= imax:
+            return True
     return False
 
 
@@ -83,8 +84,9 @@ def prepare_seed(seed):
     # normalize whitespaces
     seed = u' '.join(seed.split())
     # remove whitespaces between CJK
-    seed = u''.join([seed[i] for i in range(len(seed)) if not (
-    seed[i] in string.whitespace and is_CJK(seed[i - 1]) and is_CJK(seed[i + 1]))])
+    seed = u''.join([seed[i] for i in range(len(seed)) if not (seed[i] in string.whitespace
+                                                               and is_CJK(seed[i - 1])
+                                                               and is_CJK(seed[i + 1]))])
     return seed
 
 

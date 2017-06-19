@@ -1,22 +1,3 @@
-# -*- coding: utf-8 -*-
-# !/usr/bin/env python
-#
-# Electrum - lightweight Bitcoin client
-# Copyright (C) 2011 thomasv@gitorious
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-
 import base64
 import hashlib
 import hmac
@@ -25,11 +6,16 @@ import struct
 
 import aes
 import ecdsa
+from ecdsa import numbertheory, util
+from ecdsa.curves import SECP256k1
+from ecdsa.ecdsa import curve_secp256k1, generator_secp256k1
+from ecdsa.ellipticcurve import Point
+from ecdsa.util import number_to_string, string_to_number
 
-import version
-from util import InvalidPassword, print_error
+from lbryum import msqr, version
+from lbryum.util import InvalidPassword, print_error
 
-################################## transactions
+# transactions
 
 RECOMMENDED_FEE = 50000
 COINBASE_MATURITY = 100
@@ -145,6 +131,10 @@ def int_to_hex(i, length=1):
     return rev_hex(s)
 
 
+def hex_to_int(s):
+    return int('0x' + s[::-1].encode('hex'), 16)
+
+
 def var_int(i):
     # https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer
     if i < 0xfd:
@@ -183,12 +173,14 @@ def ripemd160(x):
 
 
 def Hash(x):
-    if type(x) is unicode: x = x.encode('utf-8')
+    if type(x) is unicode:
+        x = x.encode('utf-8')
     return sha256(sha256(x))
 
 
 def PoWHash(x):
-    if type(x) is unicode: x = x.encode('utf-8')
+    if type(x) is unicode:
+        x = x.encode('utf-8')
     r = sha512(Hash(x))
     r1 = ripemd160(r[:len(r) / 2])
     r2 = ripemd160(r[len(r) / 2:])
@@ -229,10 +221,7 @@ def i2o_ECPublicKey(pubkey, compressed=False):
 
 
 # end pywallet openssl private key implementation
-
-
-
-############ functions from pywallet #####################
+# functions from pywallet
 
 
 def hash_160(public_key):
@@ -356,7 +345,8 @@ def PrivKeyToSecret(privkey):
 
 def SecretToASecret(secret, compressed=False, addrtype=0):
     vchIn = chr((addrtype + 128) & 255) + secret
-    if compressed: vchIn += '\01'
+    if compressed:
+        vchIn += '\01'
     return EncodeBase58Check(vchIn)
 
 
@@ -430,8 +420,8 @@ def is_private_key(key):
     except:
         return False
 
+# end pywallet functions
 
-########### end pywallet functions #######################
 
 def is_minikey(text):
     # Minikeys are typically 22 or 30 characters, but this routine
@@ -446,12 +436,6 @@ def is_minikey(text):
 
 def minikey_to_private_key(text):
     return sha256(text)
-
-
-from ecdsa.ecdsa import curve_secp256k1, generator_secp256k1
-from ecdsa.curves import SECP256k1
-from ecdsa.ellipticcurve import Point
-from ecdsa.util import string_to_number, number_to_string
 
 
 def msg_magic(message):
@@ -518,8 +502,6 @@ class MyVerifyingKey(ecdsa.VerifyingKey):
     @classmethod
     def from_signature(klass, sig, recid, h, curve):
         """ See http://www.secg.org/download/aid-780/sec1-v2.pdf, chapter 4.1.6 """
-        from ecdsa import util, numbertheory
-        import msqr
         curveFp = curve.curve
         G = curve.generator
         order = G.order()
@@ -609,7 +591,8 @@ class EC_KEY(object):
         if address != addr:
             raise Exception("Bad signature")
 
-    # ECIES encryption/decryption methods; AES-128-CBC with PKCS7 is used as the cipher; hmac-sha256 is used as the mac
+    # ECIES encryption/decryption methods; AES-128-CBC with PKCS7 is used as the cipher;
+    # hmac-sha256 is used as the mac
 
     @classmethod
     def encrypt_message(self, message, pubkey):
@@ -664,9 +647,12 @@ class EC_KEY(object):
         return aes_decrypt_with_iv(key_e, iv, ciphertext)
 
 
-###################################### BIP32 ##############################
+# BIP32
 
-random_seed = lambda n: "%032x" % ecdsa.util.randrange(pow(2, n))
+def random_seed(n):
+    return "%032x" % ecdsa.util.randrange(pow(2, n))
+
+
 BIP32_PRIME = 0x80000000
 
 
@@ -710,7 +696,8 @@ def _CKD_priv(k, c, s, is_prime):
 # This function allows us to find the nth public key, as long as n is
 #  non-negative. If n is negative, we need the master private key to find it.
 def CKD_pub(cK, c, n):
-    if n & BIP32_PRIME: raise
+    if n & BIP32_PRIME:
+        raise
     return _CKD_pub(cK, c, rev_hex(int_to_hex(n, 4)).decode('hex'))
 
 
@@ -841,7 +828,8 @@ def bip32_public_derivation(xpub, branch, sequence, testnet=False):
     assert sequence.startswith(branch)
     sequence = sequence[len(branch):]
     for n in sequence.split('/'):
-        if n == '': continue
+        if n == '':
+            continue
         i = int(n)
         parent_cK = cK
         cK, c = CKD_pub(cK, c, i)

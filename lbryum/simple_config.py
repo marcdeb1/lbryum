@@ -1,11 +1,11 @@
 import ast
 import json
+import logging
 import os
 import threading
-import logging
 from copy import deepcopy
 
-from util import print_error, user_dir
+from lbryum.util import user_dir
 
 log = logging.getLogger(__name__)
 
@@ -96,21 +96,21 @@ class SimpleConfig(object):
         if not os.path.exists(path):
             os.mkdir(path)
 
-        print_error("lbryum directory", path)
+        log.info("lbryum directory: %s", path)
         return path
 
     def fixup_config_keys(self, config, keypairs):
         updated = False
         for old_key, new_key in keypairs.iteritems():
             if old_key in config:
-                if not new_key in config:
+                if new_key not in config:
                     config[new_key] = config[old_key]
                 del config[old_key]
                 updated = True
         return updated
 
     def fixup_keys(self, keypairs):
-        '''Migrate old key names to new ones'''
+        """Migrate old key names to new ones"""
         self.fixup_config_keys(self.cmdline_options, keypairs)
         self.fixup_config_keys(self.system_config, keypairs)
         if self.fixup_config_keys(self.user_config, keypairs):
@@ -142,7 +142,7 @@ class SimpleConfig(object):
         return out if out is not NULL else default
 
     def is_modifiable(self, key):
-        return not key in self.cmdline_options
+        return key not in self.cmdline_options
 
     def save_user_config(self):
         if not self.path:
