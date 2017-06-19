@@ -28,7 +28,6 @@ from functools import partial
 from unicodedata import normalize
 
 import lbrycrd
-import paymentrequest
 from account import *
 from coinchooser import COIN_CHOOSERS
 from i18n import _
@@ -1474,110 +1473,6 @@ class Abstract_Wallet(PrintError):
         addrs = self.get_unused_addresses(account)
         if addrs:
             return addrs[0]
-
-    def get_payment_request(self, addr, config):
-        import util
-        r = self.receive_requests.get(addr)
-        if not r:
-            return
-        out = copy.copy(r)
-        out['URI'] = 'bitcoin:' + addr + '?amount=' + util.format_satoshis(out.get('amount'))
-        out['status'] = self.get_request_status(addr)
-        # check if bip70 file exists
-        rdir = config.get('requests_dir')
-        if rdir:
-            key = out.get('id', addr)
-            path = os.path.join(rdir, key)
-            if os.path.exists(path):
-                baseurl = 'file://' + rdir
-                rewrite = config.get('url_rewrite')
-                if rewrite:
-                    baseurl = baseurl.replace(*rewrite)
-                out['request_url'] = os.path.join(baseurl, key)
-                out['URI'] += '&r=' + out['request_url']
-                out['index_url'] = os.path.join(baseurl, 'index.html') + '?id=' + key
-        return out
-
-    def get_request_status(self, key):
-        from paymentrequest import PR_PAID, PR_UNPAID, PR_UNKNOWN, PR_EXPIRED
-        r = self.receive_requests[key]
-        address = r['address']
-        amount = r.get('amount')
-        timestamp = r.get('time', 0)
-        if timestamp and type(timestamp) != int:
-            timestamp = 0
-        expiration = r.get('exp')
-        if expiration and type(expiration) != int:
-            expiration = 0
-        if amount:
-            if self.up_to_date:
-                paid = amount <= self.get_addr_received(address)
-                status = PR_PAID if paid else PR_UNPAID
-                if status == PR_UNPAID and expiration is not None and time.time() > timestamp + expiration:
-                    status = PR_EXPIRED
-            else:
-                status = PR_UNKNOWN
-        else:
-            status = PR_UNKNOWN
-        return status
-
-    def make_payment_request(self, addr, amount, message, expiration):
-        timestamp = int(time.time())
-        _id = Hash(addr + "%d" % timestamp).encode('hex')[0:10]
-        r = {'time': timestamp, 'amount': amount, 'exp': expiration, 'address': addr,
-             'memo': message, 'id': _id}
-        return r
-
-    def sign_payment_request(self, key, alias, alias_addr, password):
-        req = self.receive_requests.get(key)
-        alias_privkey = self.get_private_key(alias_addr, password)[0]
-        pr = paymentrequest.make_unsigned_request(req)
-        paymentrequest.sign_request_with_alias(pr, alias, alias_privkey)
-        req['name'] = pr.pki_data
-        req['sig'] = pr.signature.encode('hex')
-        self.receive_requests[key] = req
-        self.storage.put('payment_requests', self.receive_requests)
-
-    def add_payment_request(self, req, config):
-        import os
-        addr = req['address']
-        amount = req.get('amount')
-        message = req.get('memo')
-        self.receive_requests[addr] = req
-        self.storage.put('payment_requests', self.receive_requests)
-        self.set_label(addr, message)  # should be a default label
-
-        rdir = config.get('requests_dir')
-        if rdir and amount is not None:
-            key = req.get('id', addr)
-            pr = paymentrequest.make_request(config, req)
-            path = os.path.join(rdir, key)
-            with open(path, 'w') as f:
-                f.write(pr.SerializeToString())
-            # reload
-            req = self.get_payment_request(addr, config)
-            with open(os.path.join(rdir, key + '.json'), 'w') as f:
-                f.write(json.dumps(req))
-        return req
-
-    def remove_payment_request(self, addr, config):
-        if addr not in self.receive_requests:
-            return False
-        r = self.receive_requests.pop(addr)
-        rdir = config.get('requests_dir')
-        if rdir:
-            key = r.get('id', addr)
-            for s in ['.json', '']:
-                n = os.path.join(rdir, key + s)
-                if os.path.exists(n):
-                    os.unlink(n)
-        self.storage.put('payment_requests', self.receive_requests)
-        return True
-
-    def get_sorted_requests(self, config):
-        return sorted(
-            map(lambda x: self.get_payment_request(x, config), self.receive_requests.keys()),
-            key=lambda x: x.get('time', 0))
 
 
 class Imported_Wallet(Abstract_Wallet):

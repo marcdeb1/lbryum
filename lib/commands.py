@@ -42,7 +42,6 @@ from lbryschema.decode import smart_decode
 from lbryschema.error import DecodeError
 from lbryschema.signer import SECP256k1, get_signer
 from lbryschema.uri import URIParseError, parse_lbry_uri
-from paymentrequest import PR_EXPIRED, PR_PAID, PR_UNKNOWN, PR_UNPAID
 from transaction import Transaction
 from transaction import decode_claim_script, deserialize as deserialize_transaction, script_GetOp
 from transaction import get_address_from_output_script
@@ -688,82 +687,6 @@ class Commands:
     def decrypt(self, pubkey, encrypted):
         """Decrypt a message encrypted with a public key."""
         return self.wallet.decrypt_message(pubkey, encrypted, self._password)
-
-    def _format_request(self, out):
-        pr_str = {
-            PR_UNKNOWN: 'Unknown',
-            PR_UNPAID: 'Pending',
-            PR_PAID: 'Paid',
-            PR_EXPIRED: 'Expired',
-        }
-        out['amount (BTC)'] = format_satoshis(out.get('amount'))
-        out['status'] = pr_str[out.get('status', PR_UNKNOWN)]
-        return out
-
-    @command('w')
-    def getrequest(self, key):
-        """Return a payment request"""
-        r = self.wallet.get_payment_request(key, self.config)
-        if not r:
-            raise BaseException("Request not found")
-        return self._format_request(r)
-
-    # @command('w')
-    # def ackrequest(self, serialized):
-    #    """<Not implemented>"""
-    #    pass
-
-    @command('w')
-    def listrequests(self, pending=False, expired=False, paid=False):
-        """List the payment requests you made."""
-        out = self.wallet.get_sorted_requests(self.config)
-        if pending:
-            f = PR_UNPAID
-        elif expired:
-            f = PR_EXPIRED
-        elif paid:
-            f = PR_PAID
-        else:
-            f = None
-        if f is not None:
-            out = filter(lambda x: x.get('status') == f, out)
-        return map(self._format_request, out)
-
-    @command('w')
-    def addrequest(self, amount, memo='', expiration=60 * 60, force=False):
-        """Create a payment request."""
-        addr = self.wallet.get_unused_address(None)
-        if addr is None:
-            if force:
-                addr = self.wallet.create_new_address(None, False)
-            else:
-                return False
-        amount = int(COIN * Decimal(amount))
-        expiration = int(expiration)
-        req = self.wallet.make_payment_request(addr, amount, memo, expiration)
-        self.wallet.add_payment_request(req, self.config)
-        out = self.wallet.get_payment_request(addr, self.config)
-        return self._format_request(out)
-
-    @command('wp')
-    def signrequest(self, address):
-        "Sign payment request with an OpenAlias"
-        alias = self.config.get('alias')
-        if not alias:
-            raise BaseException('No alias in your configuration')
-        alias_addr = self.contacts.resolve(alias)['address']
-        self.wallet.sign_payment_request(address, alias, alias_addr, self._password)
-
-    @command('w')
-    def rmrequest(self, address):
-        """Remove a payment request"""
-        return self.wallet.remove_payment_request(address, self.config)
-
-    @command('w')
-    def clearrequests(self):
-        """Remove all payment requests"""
-        for k in self.wallet.receive_requests.keys():
-            self.wallet.remove_payment_request(k, self.config)
 
     @command('n')
     def notify(self, address, URL):
