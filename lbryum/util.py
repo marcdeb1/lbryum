@@ -161,9 +161,8 @@ def profiler(func):
         t0 = time.time()
         o = func(*args, **kw_args)
         t = time.time() - t0
-        print_error("[profiler]", n, "%.4f" % t)
+        log.info("[profiler] %s %f", n, t)
         return o
-
     return lambda *args, **kw_args: do_profile(func, args, kw_args)
 
 

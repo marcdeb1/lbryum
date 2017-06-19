@@ -6,11 +6,23 @@ language: python
 branches:
   only: 
     - master
+    - refactor
 
 python:
     - "2.7"
+
+before_install:
+  - virtualenv venv
+  - source venv/bin/activate
+
 install:
-    - pip install tox
+  - pip install -U pip
+  - pip install -r requirements.txt
+  - pip install .
+
 script:
-    - tox
-    - rvm install 2.3.1 && rvm use 2.3.1 && gem install danger --version '~> 4.0' && danger
+  - pip install pylint coverage pytest
+  - pylint lbryum
+  - coverage run --source=lbryum -m py.test -v
+  - coverage report
+  - rvm install 2.3.1 && rvm use 2.3.1 && gem install danger --version '~> 4.0' && danger

@@ -23,7 +23,7 @@ import os
 import pkgutil
 import string
 import unicodedata
-
+import logging
 import ecdsa
 import pbkdf2
 
@@ -31,6 +31,8 @@ from lbryum import i18n
 from lbryum import version
 from lbryum.lbrycrd import is_new_seed
 from lbryum.util import print_error
+
+log = logging.getLogger(__name__)
 
 # http://www.asahi-net.or.jp/~ax2s-kmtn/ref/unicode/e_asia.html
 CJK_INTERVALS = [
@@ -118,7 +120,7 @@ class Mnemonic(object):
             assert ' ' not in line
             if line:
                 self.wordlist.append(line)
-        print_error("wordlist has %d words" % len(self.wordlist))
+        log.info("wordlist has %d words", len(self.wordlist))
 
     @classmethod
     def mnemonic_to_seed(self, mnemonic, passphrase):
@@ -157,7 +159,7 @@ class Mnemonic(object):
         k = len(prefix) * 4
         # we add at least 16 bits
         n_added = max(16, k + num_bits - n)
-        print_error("make_seed", prefix, "adding %d bits" % n_added)
+        log.info("make_seed %s adding %d bits", prefix, n_added)
         my_entropy = ecdsa.util.randrange(pow(2, n_added))
         nonce = 0
         while True:
@@ -167,5 +169,5 @@ class Mnemonic(object):
             assert i == self.mnemonic_decode(seed)
             if is_new_seed(seed, prefix):
                 break
-        print_error('%d words' % len(seed.split()))
+        log.info('%d words', len(seed.split()))
         return seed
