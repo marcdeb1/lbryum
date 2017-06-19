@@ -12,7 +12,7 @@ labeled as 2.7.1. Subsequent releases will follow
   *
 
 ### Changed
-  *
+  * Updated packaging to no longer use imp
   *
 
 ### Fixed
@@ -40,6 +40,7 @@ labeled as 2.7.1. Subsequent releases will follow
  * Removed lbryum gui
  * Removed plugins
  * Remove unused files and directories
+  * Removed unused account and wallet types
 
 ### Fixed
  * set_default_subparser to `cmd` after https://github.com/lbryio/lbryum/pull/111
