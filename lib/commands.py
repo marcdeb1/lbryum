@@ -46,7 +46,7 @@ from paymentrequest import PR_EXPIRED, PR_PAID, PR_UNKNOWN, PR_UNPAID
 from transaction import Transaction
 from transaction import decode_claim_script, deserialize as deserialize_transaction, script_GetOp
 from transaction import get_address_from_output_script
-from util import NotEnoughFunds, format_satoshis, print_msg, print_stderr
+from util import NotEnoughFunds, format_satoshis
 
 log = logging.getLogger(__name__)
 
@@ -810,7 +810,7 @@ class Commands:
             claim_result['has_signature'] = False
             if decoded.has_signature:
                 if certificate is None:
-                    print_msg("fetching certificate to check claim signature")
+                    log.info("fetching certificate to check claim signature")
                     certificate = self.getclaimbyid(decoded.certificate_id)
                     if not certificate:
                         raise Exception(
@@ -840,9 +840,8 @@ class Commands:
             # print_msg("Signature for %s is invalid" % claim_id)
             return False
         except Exception as err:
-            print_msg("Signature for %s is invalid, reason: %s - %s" % (claim_address,
-                                                                        str(type(err)),
-                                                                        err))
+            log.error("Signature for %s is invalid, reason: %s - %s", claim_address, str(type(err)),
+                     err)
             return False
         return False
 
@@ -1026,8 +1025,8 @@ class Commands:
                             claim['claim_id']]
                         yield format_amount_value(formatted_claim)
                     else:
-                        print_msg("ignoring claim with name mismatch %s %s" % (
-                        claim['name'], claim['claim_id']))
+                        log.warning("ignoring claim with name mismatch %s %s", claim['name'],
+                                    claim['claim_id'])
 
         yielded_page = False
         results = []
@@ -1084,7 +1083,7 @@ class Commands:
                 result['certificate'] = self.parse_and_validate_claim_result(certificate_response,
                                                                              raw=raw)
             else:
-                print_stderr("unknown response type: %s" % certificate_resolution_type)
+                log.error("unknown response type: %s", certificate_resolution_type)
 
             if 'certificate' in result:
                 certificate = result['certificate']
@@ -1126,7 +1125,7 @@ class Commands:
                                                                        certificate,
                                                                        raw)
             else:
-                print_stderr("unknown response type: %s" % claim_resolution_type)
+                log.error("unknown response type: %s", claim_resolution_type)
 
         # if this was a resolution for a name in a channel make sure there is only one valid
         # match
@@ -1138,9 +1137,9 @@ class Commands:
             claims_in_channel, upper_bound = channel_info
 
             if len(claims_in_channel) > 1:
-                print_stderr("Multiple signed claims for the same name")
+                log.error("Multiple signed claims for the same name")
             elif not claims_in_channel:
-                print_stderr("No valid claims for this name for this channel")
+                log.error("No valid claims for this name for this channel")
             else:
                 result['claim'] = claims_in_channel[0]
 
@@ -1474,8 +1473,8 @@ class Commands:
                 if parsed_uri.claim_id and not my_claim['claim_id'].startswith(parsed_uri.claim_id):
                     return {'success': False,
                             'reason': 'claim id in URI does not match claim to update'}
-                print_msg(
-                    "There is an unspent claim in your wallet for this name, updating it instead")
+                log.info("There is an unspent claim in your wallet for this name, updating "
+                         "it instead")
                 return self.update(name, val, amount=amount, broadcast=broadcast,
                                    claim_addr=claim_addr,
                                    tx_fee=tx_fee, change_addr=change_addr,

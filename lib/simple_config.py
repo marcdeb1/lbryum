@@ -2,9 +2,12 @@ import ast
 import json
 import os
 import threading
+import logging
 from copy import deepcopy
 
-from util import print_error, print_stderr, user_dir
+from util import print_error, user_dir
+
+log = logging.getLogger(__name__)
 
 SYSTEM_CONFIG_PATH = "/etc/lbryum.conf"
 
@@ -115,7 +118,7 @@ class SimpleConfig(object):
 
     def set_key(self, key, value, save=True):
         if not self.is_modifiable(key):
-            print_stderr("Warning: not changing config key '%s' set on the command line" % key)
+            log.error("Warning: not changing config key '%s' set on the command line", key)
             return
 
         with self.lock:

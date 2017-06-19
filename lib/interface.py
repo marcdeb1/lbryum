@@ -337,25 +337,6 @@ class Interface(util.PrintError):
         return responses
 
 
-def check_cert(host, cert):
-    try:
-        b = pem.dePem(cert, 'CERTIFICATE')
-        x = x509.X509(b)
-    except:
-        traceback.print_exc(file=sys.stdout)
-        return
-
-    try:
-        x.check_date()
-        expired = False
-    except:
-        expired = True
-
-    m = "host: %s\n" % host
-    m += "has_expired: %s\n" % expired
-    util.print_msg(m)
-
-
 # Used by tests
 def _match_hostname(name, val):
     if val == name:
@@ -363,19 +344,3 @@ def _match_hostname(name, val):
 
     return val.startswith('*.') and name.endswith(val[1:])
 
-
-def test_certificates():
-    from simple_config import SimpleConfig
-    config = SimpleConfig()
-    mydir = os.path.join(config.path, "certs")
-    certs = os.listdir(mydir)
-    for c in certs:
-        print c
-        p = os.path.join(mydir, c)
-        with open(p) as f:
-            cert = f.read()
-        check_cert(c, cert)
-
-
-if __name__ == "__main__":
-    test_certificates()

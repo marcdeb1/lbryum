@@ -16,12 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-
+import logging
 from threading import Lock
 
 from lbrycrd import Hash, hash_encode
 from transaction import Transaction
 from util import ThreadJob
+
+log = logging.getLogger(__name__)
 
 
 class Synchronizer(ThreadJob):
@@ -124,7 +126,7 @@ class Synchronizer(ThreadJob):
         try:
             tx.deserialize()
         except Exception:
-            self.print_msg("cannot deserialize transaction, skipping", tx_hash)
+            log.info("cannot deserialize transaction, skipping: %s", tx_hash)
             return
         self.wallet.receive_tx_callback(tx_hash, tx, tx_height)
         self.requested_tx.remove((tx_hash, tx_height))
