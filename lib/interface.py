@@ -36,7 +36,6 @@ else:
     ca_path = requests.certs.where()
 
 import util
-import pem
 
 log = logging.getLogger(__name__)
 
