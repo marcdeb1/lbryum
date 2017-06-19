@@ -1,8 +1,6 @@
 import re
-
 import dns
 
-import dnssec
 import lbrycrd
 from util import StoreDict
 
@@ -38,7 +36,7 @@ class Contacts(StoreDict):
     def resolve_openalias(self, url):
         # support email-style addresses, per the OA standard
         url = url.replace('@', '.')
-        records, validated = dnssec.query(url, dns.rdatatype.TXT)
+        records, validated = dns.query(url, dns.rdatatype.TXT)
         prefix = 'btc'
         for record in records:
             string = record.strings[0]
