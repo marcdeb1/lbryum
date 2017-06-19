@@ -20,10 +20,6 @@ log = logging.getLogger("lbryum")
 base_units = {'BTC': 8, 'mBTC': 5, 'uBTC': 2}
 
 
-def normalize_version(v):
-    return [int(x) for x in re.sub(r'(\.0+)*$', '', v).split(".")]
-
-
 class NotEnoughFunds(Exception):
     pass
 
@@ -34,8 +30,16 @@ class InvalidPassword(Exception):
 
 
 class SilentException(Exception):
-    '''An exception that should probably be suppressed from the user'''
+    """An exception that should probably be suppressed from the user"""
     pass
+
+
+class Timeout(Exception):
+    pass
+
+
+def normalize_version(v):
+    return [int(x) for x in re.sub(r'(\.0+)*$', '', v).split(".")]
 
 
 class MyEncoder(json.JSONEncoder):
@@ -47,7 +51,7 @@ class MyEncoder(json.JSONEncoder):
 
 
 class PrintError(object):
-    '''A handy base class'''
+    """A handy base class"""
 
     def diagnostic_name(self):
         return self.__class__.__name__
@@ -68,7 +72,7 @@ class ThreadJob(PrintError):
 
 
 class DebugMem(ThreadJob):
-    '''A handy class for debugging GC memory leaks'''
+    """A handy class for debugging GC memory leaks"""
 
     def __init__(self, classes, interval=30):
         self.next_time = 0
@@ -219,10 +223,6 @@ def parse_json(message):
     return j, message[n + 1:]
 
 
-class Timeout(Exception):
-    pass
-
-
 class SocketPipe:
     def __init__(self, socket):
         self.socket = socket
@@ -295,39 +295,6 @@ class SocketPipe:
                 else:
                     traceback.print_exc(file=sys.stdout)
                     raise e
-
-
-class QueuePipe:
-    def __init__(self, send_queue=None, get_queue=None):
-        self.send_queue = send_queue if send_queue else Queue.Queue()
-        self.get_queue = get_queue if get_queue else Queue.Queue()
-        self.set_timeout(0.1)
-
-    def get(self):
-        try:
-            return self.get_queue.get(timeout=self.timeout)
-        except Queue.Empty:
-            raise Timeout
-
-    def get_all(self):
-        responses = []
-        while True:
-            try:
-                r = self.get_queue.get_nowait()
-                responses.append(r)
-            except Queue.Empty:
-                break
-        return responses
-
-    def set_timeout(self, t):
-        self.timeout = t
-
-    def send(self, request):
-        self.send_queue.put(request)
-
-    def send_all(self, requests):
-        for request in requests:
-            self.send(request)
 
 
 class StoreDict(dict):
