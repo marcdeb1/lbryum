@@ -29,7 +29,7 @@ import pbkdf2
 
 import i18n
 import version
-from lbrycrd import is_new_seed, is_old_seed
+from lbrycrd import is_new_seed
 from util import print_error
 
 # http://www.asahi-net.or.jp/~ax2s-kmtn/ref/unicode/e_asia.html
@@ -163,8 +163,6 @@ class Mnemonic(object):
             i = custom_entropy * (my_entropy + nonce)
             seed = self.mnemonic_encode(i)
             assert i == self.mnemonic_decode(seed)
-            if is_old_seed(seed):
-                continue
             if is_new_seed(seed, prefix):
                 break
         print_error('%d words' % len(seed.split()))

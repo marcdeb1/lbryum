@@ -1970,7 +1970,7 @@ class Wallet(object):
 
     @staticmethod
     def is_seed(seed):
-        return is_old_seed(seed) or is_new_seed(seed)
+        return is_new_seed(seed)
 
     @staticmethod
     def is_old_mpk(mpk):

@@ -4,7 +4,7 @@ import unittest
 from ecdsa.util import number_to_string
 
 from lib.lbrycrd import EC_KEY, Hash, address_from_private_key, bip32_private_derivation, \
-    bip32_public_derivation, bip32_root, generator_secp256k1, is_new_seed, is_old_seed, \
+    bip32_public_derivation, bip32_root, generator_secp256k1, is_new_seed, \
     is_private_key, is_valid, op_push, point_to_ser, public_key_from_private_key, \
     public_key_to_bc_address, pw_decode, pw_encode, var_int, xpub_from_xprv
 
@@ -204,12 +204,3 @@ class Test_seeds(unittest.TestCase):
 
         seed = "cram swing cover prefer miss modify ritual silly deliver chunk behind inform"
         self.assertFalse(is_new_seed(seed))
-
-    def test_old_seed(self):
-        self.assertTrue(is_old_seed(" ".join(["like"] * 12)))
-        self.assertFalse(is_old_seed(" ".join(["like"] * 18)))
-        self.assertTrue(is_old_seed(" ".join(["like"] * 24)))
-        self.assertFalse(is_old_seed("not a seed"))
-
-        self.assertTrue(is_old_seed("0123456789ABCDEF" * 2))
-        self.assertTrue(is_old_seed("0123456789ABCDEF" * 4))

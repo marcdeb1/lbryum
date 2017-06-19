@@ -208,24 +208,6 @@ def is_new_seed(x, prefix=version.SEED_PREFIX):
     return s.startswith(prefix)
 
 
-def is_old_seed(seed):
-    import old_mnemonic
-    words = seed.strip().split()
-    try:
-        old_mnemonic.mn_decode(words)
-        uses_electrum_words = True
-    except Exception:
-        uses_electrum_words = False
-
-    try:
-        seed.decode('hex')
-        is_hex = (len(seed) == 32 or len(seed) == 64)
-    except Exception:
-        is_hex = False
-
-    return is_hex or (uses_electrum_words and (len(words) == 12 or len(words) == 24))
-
-
 # pywallet openssl private key implementation
 
 def i2o_ECPublicKey(pubkey, compressed=False):

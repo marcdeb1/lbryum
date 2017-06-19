@@ -1,7 +1,6 @@
 import unittest
 
 from lib import mnemonic
-from lib import old_mnemonic
 
 
 class Test_NewMnemonic(unittest.TestCase):
@@ -22,12 +21,3 @@ class Test_NewMnemonic(unittest.TestCase):
             self.assertTrue(m.check_seed(seed, custom_entropy=1))
             i = m.mnemonic_decode(seed)
             self.assertEquals(m.mnemonic_encode(i), seed)
-
-
-class Test_OldMnemonic(unittest.TestCase):
-    def test(self):
-        seed = '8edad31a95e7d59f8837667510d75a4d'
-        result = old_mnemonic.mn_encode(seed)
-        words = 'hardly point goal hallway patience key stone difference ready caught listen fact'
-        self.assertEquals(result, words.split())
-        self.assertEquals(old_mnemonic.mn_decode(result), seed)
