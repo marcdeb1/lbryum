@@ -36,7 +36,6 @@ else:
     ca_path = requests.certs.where()
 
 import util
-import x509
 import pem
 
 log = logging.getLogger(__name__)
@@ -68,34 +67,9 @@ class TcpConnection(threading.Thread, util.PrintError):
         self.host, self.port, self.protocol = self.server.split(':')
         self.host = str(self.host)
         self.port = int(self.port)
-        self.use_ssl = (self.protocol == 's')
 
     def diagnostic_name(self):
         return self.host
-
-    def check_host_name(self, peercert, name):
-        """Simple certificate/host name checker.  Returns True if the
-        certificate matches, False otherwise.  Does not support
-        wildcards."""
-        # Check that the peer has supplied a certificate.
-        # None/{} is not acceptable.
-        if not peercert:
-            return False
-        if peercert.has_key("subjectAltName"):
-            for typ, val in peercert["subjectAltName"]:
-                if typ == "DNS" and val == name:
-                    return True
-        else:
-            # Only check the subject DN if there is no subject alternative
-            # name.
-            cn = None
-            for attr, val in peercert["subject"]:
-                # Use most-specific (last) commonName attribute.
-                if attr == "commonName":
-                    cn = val
-            if cn is not None:
-                return cn == name
-        return False
 
     def get_simple_socket(self):
         try:
@@ -117,96 +91,9 @@ class TcpConnection(threading.Thread, util.PrintError):
             self.print_error("failed to connect", str(e))
 
     def get_socket(self):
-        if self.use_ssl:
-            cert_path = os.path.join(self.config_path, 'certs', self.host)
-            if not os.path.exists(cert_path):
-                is_new = True
-                s = self.get_simple_socket()
-                if s is None:
-                    return
-                # try with CA first
-                try:
-                    s = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_SSLv23,
-                                        cert_reqs=ssl.CERT_REQUIRED,
-                                        ca_certs=ca_path, do_handshake_on_connect=True)
-                except ssl.SSLError, e:
-                    s = None
-                if s and self.check_host_name(s.getpeercert(), self.host):
-                    self.print_error("SSL certificate signed by CA")
-                    return s
-
-                # get server certificate.
-                # Do not use ssl.get_server_certificate because it does not work with proxy
-                s = self.get_simple_socket()
-                if s is None:
-                    return
-                try:
-                    s = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_SSLv23, cert_reqs=ssl.CERT_NONE,
-                                        ca_certs=None)
-                except ssl.SSLError, e:
-                    self.print_error("SSL error retrieving SSL certificate:", e)
-                    return
-
-                dercert = s.getpeercert(True)
-                s.close()
-                cert = ssl.DER_cert_to_PEM_cert(dercert)
-                # workaround android bug
-                cert = re.sub("([^\n])-----END CERTIFICATE-----", "\\1\n-----END CERTIFICATE-----",
-                              cert)
-                temporary_path = cert_path + '.temp'
-                with open(temporary_path, "w") as f:
-                    f.write(cert)
-            else:
-                is_new = False
-
         s = self.get_simple_socket()
         if s is None:
             return
-
-        if self.use_ssl:
-            try:
-                s = ssl.wrap_socket(s,
-                                    ssl_version=ssl.PROTOCOL_SSLv23,
-                                    cert_reqs=ssl.CERT_REQUIRED,
-                                    ca_certs=(temporary_path if is_new else cert_path),
-                                    do_handshake_on_connect=True)
-            except ssl.SSLError, e:
-                self.print_error("SSL error:", e)
-                if e.errno != 1:
-                    return
-                if is_new:
-                    rej = cert_path + '.rej'
-                    if os.path.exists(rej):
-                        os.unlink(rej)
-                    os.rename(temporary_path, rej)
-                else:
-                    with open(cert_path) as f:
-                        cert = f.read()
-                    try:
-                        b = pem.dePem(cert, 'CERTIFICATE')
-                        x = x509.X509(b)
-                    except:
-                        traceback.print_exc(file=sys.stderr)
-                        self.print_error("wrong certificate")
-                        return
-                    try:
-                        x.check_date()
-                    except:
-                        self.print_error("certificate has expired:", cert_path)
-                        os.unlink(cert_path)
-                        return
-                    self.print_error("wrong certificate")
-                return
-            except BaseException, e:
-                self.print_error(e)
-                if e.errno == 104:
-                    return
-                traceback.print_exc(file=sys.stderr)
-                return
-
-            if is_new:
-                self.print_error("saving certificate")
-                os.rename(temporary_path, cert_path)
 
         return s
 
