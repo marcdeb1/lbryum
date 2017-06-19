@@ -330,10 +330,7 @@ class Abstract_Wallet(PrintError):
         d = self.storage.get('accounts', {})
         removed = False
         for k, v in d.items():
-            if self.wallet_type == 'old' and k in [0, '0']:
-                v['mpk'] = self.storage.get('master_public_key')
-                self.accounts['0'] = OldAccount(v)
-            elif v.get('imported'):
+            if v.get('imported'):
                 self.accounts[k] = ImportedAccount(v)
             elif v.get('xpub'):
                 self.accounts[k] = BIP32_Account(v)
@@ -1424,12 +1421,6 @@ class Abstract_Wallet(PrintError):
                     if xprv:
                         _, _, _, c, k = deserialize_xkey(xprv)
                         return bip32_private_key(sequence, k, c)
-        elif x_pubkey[0:2] == 'fe':
-            xpub, sequence = OldAccount.parse_xpubkey(x_pubkey)
-            for k, account in self.accounts.items():
-                if xpub in account.get_master_pubkeys():
-                    pk = account.get_private_key(sequence, self, password)
-                    return pk[0]
         elif x_pubkey[0:2] == 'fd':
             addrtype = ord(x_pubkey[2:4].decode('hex'))
             addr = hash_160_to_bc_address(x_pubkey[4:].decode('hex'), addrtype)

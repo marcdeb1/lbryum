@@ -338,10 +338,6 @@ def parse_xpub(x_pubkey):
         from account import BIP32_Account
         xpub, s = BIP32_Account.parse_xpubkey(x_pubkey)
         pubkey = BIP32_Account.derive_pubkey_from_xpub(xpub, s[0], s[1])
-    elif x_pubkey[0:2] == 'fe':
-        from account import OldAccount
-        mpk, s = OldAccount.parse_xpubkey(x_pubkey)
-        pubkey = OldAccount.get_pubkey_from_mpk(mpk.decode('hex'), s[0], s[1])
     elif x_pubkey[0:2] == 'fd':
         addrtype = ord(x_pubkey[2:4].decode('hex'))
         hash160 = x_pubkey[4:].decode('hex')

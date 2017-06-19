@@ -138,12 +138,6 @@ class TestTransaction(unittest.TestCase):
             transaction.parse_xpub('')
 
     def test_parse_xpub(self):
-        res = transaction.parse_xpub(
-            'fe4e13b0f311a55b8a5db9a32e959da9f011b131019d4cebe6141b9e2c93edcbfc0954c358b062a9f94111548e50bde5847a3096b8b7872dcffadb0e9579b9017b01000200')
-        self.assertEquals(res, (
-        '04ee98d63800824486a1cf5b4376f2f574d86e0a3009a6448105703453f3368e8e1d8d090aaecdd626a45cc49876709a3bbb6dc96a4311b3cac03e225df5f63dfc',
-        'bMRQkGyYz3j5by7tamaCJ4WWXCR5oDmzYf'))
-
         res = transaction.parse_xpub('fd007d260305ef27224bbcf6cf5238d2b3638b5a78d5')
         self.assertEquals(res, (None, 'bQ8zhKJViSigoeyJYYLDsTLsuaBraUv74z'))
 
