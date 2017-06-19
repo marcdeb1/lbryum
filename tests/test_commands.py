@@ -1,7 +1,7 @@
 import unittest
 
-from lib import commands
-from lib import util
+from lbryum import commands
+from lbryum import util
 
 
 class MocWallet(object):

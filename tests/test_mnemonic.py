@@ -1,6 +1,6 @@
 import unittest
 
-from lib import mnemonic
+from lbryum import mnemonic
 
 
 class Test_NewMnemonic(unittest.TestCase):

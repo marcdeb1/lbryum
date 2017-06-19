@@ -1,7 +1,7 @@
 import unittest
 
-from lib import account
-from lib import wallet
+from lbryum import account
+from lbryum import wallet
 
 
 class Test_Account(unittest.TestCase):

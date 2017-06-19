@@ -1,6 +1,6 @@
 import unittest
 
-from lib.util import format_satoshis
+from lbryum.util import format_satoshis
 
 
 class TestUtil(unittest.TestCase):

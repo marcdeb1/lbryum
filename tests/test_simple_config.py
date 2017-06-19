@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from StringIO import StringIO
 
-from lib.simple_config import (SimpleConfig, read_system_config,
-                               read_user_config)
+from lbryum.simple_config import (SimpleConfig, read_system_config,
+                                  read_user_config)
 
 
 class Test_SimpleConfig(unittest.TestCase):

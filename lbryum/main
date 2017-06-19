@@ -62,8 +62,8 @@ if is_bundle or is_local or is_android:
 
 from lbryum import util
 from lbryum import SimpleConfig, Network, Wallet, WalletStorage
-from lbryum.util import print_msg, print_stderr, json_encode, json_decode, set_verbosity, \
-    InvalidPassword
+from lbryum.util import print_msg, print_stderr, json_encode, json_decode, set_verbosity
+from lbryum.util import InvalidPassword
 from lbryum.commands import get_parser, known_commands, Commands, config_variables
 from lbryum.daemon import Daemon, get_daemon
 

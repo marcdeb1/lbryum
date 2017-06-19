@@ -3,7 +3,7 @@ import unittest
 
 from ecdsa.util import number_to_string
 
-from lib.lbrycrd import EC_KEY, Hash, address_from_private_key, bip32_private_derivation, \
+from lbryum.lbrycrd import EC_KEY, Hash, address_from_private_key, bip32_private_derivation, \
     bip32_public_derivation, bip32_root, generator_secp256k1, is_new_seed, \
     is_private_key, is_valid, op_push, point_to_ser, public_key_from_private_key, \
     public_key_to_bc_address, pw_decode, pw_encode, var_int, xpub_from_xprv

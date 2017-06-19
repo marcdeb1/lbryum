@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from StringIO import StringIO
 
-from lib.wallet import NewWallet, WalletStorage
+from lbryum.wallet import NewWallet, WalletStorage
 
 
 class FakeSynchronizer(object):

@@ -1,9 +1,9 @@
 import binascii
 import unittest
 
-from lib import claims
-from lib import commands
-from lib import lbrycrd
+from lbryum import claims
+from lbryum import commands
+from lbryum import lbrycrd
 
 
 def get_powhash(input_str):

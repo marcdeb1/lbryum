@@ -2,7 +2,7 @@ import hashlib
 import random
 import unittest
 
-from lib import ripemd
+from lbryum import ripemd
 
 
 class Test_RIPEMD160(unittest.TestCase):
