@@ -25,7 +25,6 @@ class PrintError(object):
         return self.__class__.__name__
 
     def print_error(self, *msg):
-        log.info(" ".join([str(m) for m in list(msg)]))
         print_error("[%s]" % self.diagnostic_name(), *msg)
 
 
@@ -130,7 +129,7 @@ def profiler(func):
         t0 = time.time()
         o = func(*args, **kw_args)
         t = time.time() - t0
-        log.info("[profiler] %s %f", n, t)
+        log.debug("[profiler] %s %f", n, t)
         return o
     return lambda *args, **kw_args: do_profile(func, args, kw_args)
 

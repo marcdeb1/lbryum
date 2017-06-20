@@ -213,6 +213,11 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
+    if args.verbose:
+        logging.getLogger("lbryum").setLevel(logging.INFO)
+    else:
+        logging.getLogger("lbryum").setLevel(logging.ERROR)
+
     # config is an object passed to the various constructors (wallet, interface, gui)
     config_options = args.__dict__
     for k, v in config_options.items():

@@ -31,7 +31,7 @@ from lbryum.transaction import Transaction
 from lbryum.transaction import decode_claim_script, deserialize as deserialize_transaction
 from lbryum.transaction import get_address_from_output_script, script_GetOp
 from lbryum.errors import InvalidProofError, NotEnoughFunds
-from lbryum.util import format_satoshis, profiler, rev_hex
+from lbryum.util import format_satoshis, rev_hex
 
 
 log = logging.getLogger(__name__)
@@ -2090,7 +2090,6 @@ def add_network_options(parser):
                         help="set proxy [type:]host[:port], where type is socks4,socks5 or http")
 
 
-@profiler
 def get_parser():
     # parent parser, because set_default_subparser removes global options
     parent_parser = argparse.ArgumentParser('parent', add_help=False)
@@ -2106,21 +2105,6 @@ def get_parser():
         parents=[parent_parser],
         epilog="Run 'lbryum help <command>' to see the help for a command")
     subparsers = parser.add_subparsers(dest='cmd', metavar='<command>')
-    # gui
-    parser_gui = subparsers.add_parser('gui', parents=[parent_parser],
-                                       description="Run Electrum's Graphical User Interface.",
-                                       help="Run GUI (default)")
-    parser_gui.add_argument("url", nargs='?', default=None, help="bitcoin URI (or bip70 file)")
-    # parser_gui.set_defaults(func=run_gui)
-    parser_gui.add_argument("-g", "--gui", dest="gui", help="select graphical user interface",
-                            choices=['qt', 'kivy', 'text', 'stdio'])
-    parser_gui.add_argument("-o", "--offline", action="store_true", dest="offline", default=False,
-                            help="Run offline")
-    parser_gui.add_argument("-m", action="store_true", dest="hide_gui", default=False,
-                            help="hide GUI on startup")
-    parser_gui.add_argument("-L", "--lang", dest="language", default=None,
-                            help="default language used in GUI")
-    add_network_options(parser_gui)
     # daemon
     parser_daemon = subparsers.add_parser('daemon', parents=[parent_parser], help="Run Daemon")
     parser_daemon.add_argument("subcommand", choices=['start', 'status', 'stop'])

@@ -669,7 +669,7 @@ class Network(DaemonThread):
                         self.switch_lagging_interface(interface.server)
                         self.notify('updated')
                     else:
-                        interface.print_error("header didn't connect, dismissing interface")
+                        log.warning("header didn't connect, dismissing interface")
                         interface.close()
                 else:
                     self.request_header(interface, data, next_height)
@@ -704,7 +704,7 @@ class Network(DaemonThread):
                 if not self.bc_request_headers(interface, data):
                     continue
             elif time.time() - req_time > 30:
-                interface.print_error("blockchain request timed out")
+                log.error("blockchain request timed out")
                 self.connection_down(interface.server)
                 continue
             # Put updated request state back at head of deque

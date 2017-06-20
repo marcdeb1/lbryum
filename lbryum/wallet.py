@@ -43,7 +43,7 @@ class WalletStorage(PrintError):
         self.path = path
         self.file_exists = False
         self.modified = False
-        self.print_error("wallet path", self.path)
+        log.info("wallet path: %s", self.path)
         if self.path:
             self.read(self.path)
 
