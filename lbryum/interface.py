@@ -69,8 +69,6 @@ class TcpConnection(threading.Thread, PrintError):
             except BaseException as e:
                 log.exception('Failed to connect to %s', res)
                 continue
-        else:
-            self.print_error("failed to connect", str(e))
 
     def get_socket(self):
         s = self.get_simple_socket()

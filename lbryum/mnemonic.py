@@ -118,7 +118,7 @@ class Mnemonic(object):
         log.info("wordlist has %d words", len(self.wordlist))
 
     @classmethod
-    def mnemonic_to_seed(self, mnemonic, passphrase):
+    def mnemonic_to_seed(cls, mnemonic, passphrase):
         PBKDF2_ROUNDS = 2048
         mnemonic = prepare_seed(mnemonic)
         return pbkdf2.PBKDF2(mnemonic, 'lbryum' + passphrase, iterations=PBKDF2_ROUNDS,

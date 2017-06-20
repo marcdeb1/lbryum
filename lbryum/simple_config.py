@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import threading
+import ConfigParser
 from copy import deepcopy
 
 from lbryum.util import user_dir
@@ -194,12 +195,6 @@ def read_system_config(path=SYSTEM_CONFIG_PATH):
     """Parse and return the system config settings in /etc/lbryum.conf."""
     result = {}
     if os.path.exists(path):
-        try:
-            import ConfigParser
-        except ImportError:
-            print "cannot parse lbryum.conf. please install ConfigParser"
-            return
-
         p = ConfigParser.ConfigParser()
         try:
             p.read(path)
@@ -227,6 +222,6 @@ def read_user_config(path):
             result = ast.literal_eval(data)
         except Exception:
             raise Exception('Failed to parse config file {}'.format(config_path))
-    if not type(result) is dict:
+    if not isinstance(result, dict):
         raise Exception('User config must be a dictionary')
     return result

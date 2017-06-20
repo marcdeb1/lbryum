@@ -70,8 +70,7 @@ class SPV(ThreadJob):
 
     def hash_merkle_root(self, merkle_s, target_hash, pos):
         h = hash_decode(target_hash)
-        for i in range(len(merkle_s)):
-            item = merkle_s[i]
+        for i, item in enumerate(merkle_s):
             h = Hash(hash_decode(item) + h) if ((pos >> i) & 1) else Hash(h + hash_decode(item))
         return hash_encode(h)
 

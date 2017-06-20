@@ -107,7 +107,7 @@ def format_amount_value(obj):
     return obj
 
 
-class Command:
+class Command(object):
     def __init__(self, func, s):
         self.name = func.__name__
         self.requires_network = 'n' in s
@@ -142,7 +142,7 @@ def command(s):
     return decorator
 
 
-class Commands:
+class Commands(object):
     def __init__(self, config, wallet, network, callback=None, password=None, new_password=None):
         self.config = config
         self.wallet = wallet
@@ -484,7 +484,7 @@ class Commands:
                     output = (TYPE_ADDRESS, address, amount)
                     dummy_tx = Transaction.from_io(inputs, [output])
                     fee_per_kb = self.wallet.fee_per_kb(self.config)
-                    fee = dummy_tx.estimated_fee(fee_per_kb)
+                    fee = dummy_tx.estimated_fee(self.wallet.relayfee(), fee_per_kb)
                 amount -= fee
             else:
                 amount = int(COIN * Decimal(amount))
@@ -1465,7 +1465,7 @@ class Commands:
         for i, output in enumerate(tx._outputs):
             if output[0] & TYPE_CLAIM:
                 nout = i
-        assert (nout is not None)
+        assert nout is not None
 
         claimid = encode_claim_id_hex(claim_id_hash(rev_hex(tx.hash()).decode('hex'), nout))
         return {"success": True, "txid": tx.hash(), "nout": nout, "tx": str(tx),
@@ -1819,7 +1819,7 @@ class Commands:
             ]
             # add the change utxos to output
             for output in dummy_tx._outputs:
-                if not (output[0] & TYPE_UPDATE):
+                if not output[0] & TYPE_UPDATE:
                     outputs.append(output)
 
         # amount is less than the original bid,

@@ -41,7 +41,6 @@ SERVER_RETRY_INTERVAL = 10
 
 def parse_servers(result):
     """ parse servers list into dict format"""
-    from version import PROTOCOL_VERSION
     servers = {}
     for item in result:
         host = item[1]
@@ -227,7 +226,8 @@ class Network(DaemonThread):
     def trigger_callback(self, event, *args):
         with self.lock:
             callbacks = self.callbacks[event][:]
-        [callback(event, *args) for callback in callbacks]
+        for callback in callbacks:
+            callback(event, *args)
 
     def get_server_height(self):
         return self.heights.get(self.default_server, 0)

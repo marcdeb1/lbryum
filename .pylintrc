@@ -119,6 +119,10 @@ disable=
   wrong-import-order,
   wrong-import-position,
   deprecated-lambda,
+  simplifiable-if-statement,
+  unidiomatic-typecheck,
+  global-at-module-level,
+  global-variable-not-assigned
 
 
 [REPORTS]

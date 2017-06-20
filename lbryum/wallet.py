@@ -673,7 +673,7 @@ class Abstract_Wallet(PrintError):
             raise BaseException('nOut is too large')
         txout = txouts[nOut]
         txout_type, txout_dest, txout_value = txout
-        if not (txout_type & (TYPE_CLAIM | TYPE_UPDATE | TYPE_SUPPORT)):
+        if not txout_type & (TYPE_CLAIM | TYPE_UPDATE | TYPE_SUPPORT):
             raise BaseException('txid and nOut does not refer to a claimtrie transaction')
 
         address = txout_dest[1]
@@ -700,7 +700,7 @@ class Abstract_Wallet(PrintError):
             i['claim_value'] = txout_dest[0][2]
         else:
             # should not reach here
-            assert (0)
+            raise ZeroDivisionError()
 
         self.add_input_info(i)
         return i
@@ -1449,7 +1449,7 @@ class Abstract_Wallet(PrintError):
             raise BaseException("z")
 
     def is_watching_only(self):
-        False
+        return False
 
     def can_change_password(self):
         return not self.is_watching_only()
@@ -1529,26 +1529,26 @@ class Deterministic_Wallet(Abstract_Wallet):
     def get_mnemonic(self, password):
         return self.get_seed(password)
 
-    def change_gap_limit(self, value):
-        '''This method is not called in the code, it is kept for console use'''
-        if value >= self.gap_limit:
-            self.gap_limit = value
-            self.storage.put('gap_limit', self.gap_limit)
-            return True
-
-        elif value >= self.min_acceptable_gap():
-            for key, account in self.accounts.items():
-                addresses = account.get_addresses(False)
-                k = self.num_unused_trailing_addresses(addresses)
-                n = len(addresses) - k + value
-                account.receiving_pubkeys = account.receiving_pubkeys[0:n]
-                account.receiving_addresses = account.receiving_addresses[0:n]
-            self.gap_limit = value
-            self.storage.put('gap_limit', self.gap_limit)
-            self.save_accounts()
-            return True
-        else:
-            return False
+    # def change_gap_limit(self, value):
+    #     '''This method is not called in the code, it is kept for console use'''
+    #     if value >= self.gap_limit:
+    #         self.gap_limit = value
+    #         self.storage.put('gap_limit', self.gap_limit)
+    #         return True
+    #
+    #     elif value >= self.min_acceptable_gap():
+    #         for key, account in self.accounts.items():
+    #             addresses = account.get_addresses(False)
+    #             k = self.num_unused_trailing_addresses(addresses)
+    #             n = len(addresses) - k + value
+    #             account.receiving_pubkeys = account.receiving_pubkeys[0:n]
+    #             account.receiving_addresses = account.receiving_addresses[0:n]
+    #         self.gap_limit = value
+    #         self.storage.put('gap_limit', self.gap_limit)
+    #         self.save_accounts()
+    #         return True
+    #     else:
+    #         return False
 
     def num_unused_trailing_addresses(self, addresses):
         k = 0
@@ -1750,7 +1750,7 @@ class BIP32_HD_Wallet(BIP32_RD_Wallet):
     # Abstract base class for a BIP32 wallet that admits account creation
 
     def __init__(self, storage):
-        BIP32_Wallet.__init__(self, storage)
+        BIP32_RD_Wallet.__init__(self, storage)
         # Backwards-compatibility.  Remove legacy "next_account2" and
         # drop unused master public key to avoid duplicate errors
         acc2 = storage.get('next_account2', None)
@@ -1875,7 +1875,7 @@ class Multisig_Wallet(BIP32_RD_Wallet, Mnemonic):
     root_derivation = "m/"
 
     def __init__(self, storage):
-        BIP32_Wallet.__init__(self, storage)
+        BIP32_RD_Wallet.__init__(self, storage)
         self.wallet_type = storage.get('wallet_type')
         self.m, self.n = Wallet.multisig_type(self.wallet_type)
 
@@ -1922,7 +1922,7 @@ class Wallet(object):
     This class is actually a factory that will return a wallet of the correct
     type when passed a WalletStorage instance."""
 
-    def __new__(self, storage):
+    def __new__(cls, storage):
         seed_version = storage.get('seed_version')
         if not seed_version:
             seed_version = NEW_SEED_VERSION

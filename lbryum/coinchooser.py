@@ -228,11 +228,14 @@ class CoinChooserOldestFirst(CoinChooserBase):
             selected.append(bucket)
             if sufficient_funds(selected):
                 return strip_unneeded(selected, sufficient_funds)
-        else:
-            raise NotEnoughFunds()
+        raise NotEnoughFunds()
 
 
 class CoinChooserRandom(CoinChooserBase):
+    def keys(self, coins):
+        return [coin['prevout_hash'] + ':' + str(coin['prevout_n'])
+                for coin in coins]
+
     def bucket_candidates(self, buckets, sufficient_funds):
         '''Returns a list of bucket sets.'''
         candidates = set()
@@ -282,10 +285,6 @@ class CoinChooserPrivacy(CoinChooserRandom):
 
     def keys(self, coins):
         return [coin['address'] for coin in coins]
-
-    def penalty_func(self, buckets, tx):
-        '''Returns a penalty for a candidate set of buckets.'''
-        raise NotImplementedError
 
     def penalty_func(self, tx):
         min_change = min(o[2] for o in tx.outputs()) * 0.75

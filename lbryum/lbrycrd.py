@@ -3,7 +3,7 @@ import hashlib
 import hmac
 import re
 import struct
-
+import logging
 import aes
 import ecdsa
 from ecdsa import numbertheory, util
@@ -17,6 +17,8 @@ from lbryum.base import base_decode, base_encode, EncodeBase58Check, DecodeBase5
 from lbryum.util import print_error, rev_hex, var_int, int_to_hex
 from lbryum.hashing import Hash, sha256, hash_160, hmac_sha_512
 from lbryum.errors import InvalidPassword
+
+log = logging.getLogger(__name__)
 
 # address prefixes are set when the blockchain is initialized by blockchain.get_blockchain
 # the default values are for lbrycrd_main
@@ -334,7 +336,7 @@ def ser_to_point(Aser):
 
 class MyVerifyingKey(ecdsa.VerifyingKey):
     @classmethod
-    def from_signature(klass, sig, recid, h, curve):
+    def from_signature(cls, sig, recid, h, curve):
         """ See http://www.secg.org/download/aid-780/sec1-v2.pdf, chapter 4.1.6 """
         curveFp = curve.curve
         G = curve.generator
@@ -355,7 +357,7 @@ class MyVerifyingKey(ecdsa.VerifyingKey):
         # 1.6 compute Q = r^-1 (sR - eG)
         inv_r = numbertheory.inverse_mod(r, order)
         Q = inv_r * (s * R + minus_e * G)
-        return klass.from_public_point(Q, curve)
+        return cls.from_public_point(Q, curve)
 
 
 class MySigningKey(ecdsa.SigningKey):
@@ -397,12 +399,12 @@ class EC_KEY(object):
                 self.verify_message(address, sig, message)
                 return sig
             except Exception:
+                log.exception("error: cannot sign message")
                 continue
-        else:
-            raise Exception("error: cannot sign message")
+        raise Exception("error: cannot sign message")
 
     @classmethod
-    def verify_message(self, address, sig, message):
+    def verify_message(cls, address, sig, message):
         if len(sig) != 65:
             raise Exception("Wrong encoding")
         nV = ord(sig[0])
@@ -429,7 +431,7 @@ class EC_KEY(object):
     # hmac-sha256 is used as the mac
 
     @classmethod
-    def encrypt_message(self, message, pubkey):
+    def encrypt_message(cls, message, pubkey):
 
         pk = ser_to_point(pubkey)
         if not ecdsa.ecdsa.point_is_valid(generator_secp256k1, pk.x(), pk.y()):
@@ -531,7 +533,7 @@ def _CKD_priv(k, c, s, is_prime):
 #  non-negative. If n is negative, we need the master private key to find it.
 def CKD_pub(cK, c, n):
     if n & BIP32_PRIME:
-        raise
+        raise Exception("CKD pub error")
     return _CKD_pub(cK, c, rev_hex(int_to_hex(n, 4)).decode('hex'))
 
 

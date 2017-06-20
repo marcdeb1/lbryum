@@ -18,14 +18,6 @@ def normalize_version(v):
     return [int(x) for x in re.sub(r'(\.0+)*$', '', v).split(".")]
 
 
-class MyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        from transaction import Transaction
-        if isinstance(obj, Transaction):
-            return obj.as_dict()
-        return super(MyEncoder, self).default(obj)
-
-
 class PrintError(object):
     """A handy base class"""
 
