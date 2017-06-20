@@ -5,7 +5,9 @@ import sys
 import threading
 import time
 import requests.certs
-from lbryum import util
+from lbryum.util import PrintError
+from lbryum.errors import Timeout
+from lbryum.socket_pipe import SocketPipe
 
 if getattr(sys, 'frozen', False) and os.name == "nt":
     # When frozen for windows distribution, get the include cert
@@ -37,7 +39,7 @@ def Connection(server, queue, config_path):
     return c
 
 
-class TcpConnection(threading.Thread, util.PrintError):
+class TcpConnection(threading.Thread, PrintError):
     def __init__(self, server, queue, config_path):
         threading.Thread.__init__(self)
         self.daemon = True
@@ -84,7 +86,7 @@ class TcpConnection(threading.Thread, util.PrintError):
         self.queue.put((self.server, socket))
 
 
-class Interface(util.PrintError):
+class Interface(PrintError):
     """The Interface class handles a socket connected to a single remote
     lbryum server.  It's exposed API is:
 
@@ -98,7 +100,7 @@ class Interface(util.PrintError):
         self.host, _, _ = server.split(':')
         self.socket = socket
 
-        self.pipe = util.SocketPipe(socket)
+        self.pipe = SocketPipe(socket)
         self.pipe.set_timeout(0.0)  # Don't wait for data
         # Dump network messages.  Set at runtime from the console.
         self.debug = False
@@ -179,7 +181,7 @@ class Interface(util.PrintError):
         while True:
             try:
                 response = self.pipe.get()
-            except util.Timeout:
+            except Timeout:
                 break
             if response is None:
                 responses.append((None, None))

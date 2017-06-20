@@ -1,21 +1,15 @@
 import os
+import urllib
+import socket
 
-from lbryum import lbrycrd, util
-from lbryum.lbrycrd import hex_to_int
+from lbryum.util import hex_to_int, PrintError, int_to_hex, rev_hex
+from lbryum.hashing import hash_encode, Hash, PoWHash
 from lbryum.networks import blockchain_params
-
-NULL_HASH = '0000000000000000000000000000000000000000000000000000000000000000'
-HEADER_SIZE = 112
-BLOCKS_PER_CHUNK = 96
-
-HEADERS_URL = "https://s3.amazonaws.com/lbry-blockchain-headers/blockchain_headers_latest"
+from lbryum.errors import ChainValidationError
+from lbryum.constants import HEADER_SIZE, HEADERS_URL, BLOCKS_PER_CHUNK, NULL_HASH
 
 
-class ChainValidationError(Exception):
-    pass
-
-
-class LbryCrd(util.PrintError):
+class LbryCrd(PrintError):
     """Manages blockchain headers and their verification"""
 
     BLOCKCHAIN_NAME = "lbrycrd_main"
@@ -95,22 +89,22 @@ class LbryCrd(util.PrintError):
             return NULL_HASH
 
     def serialize_header(self, res):
-        s = lbrycrd.int_to_hex(res.get('version'), 4) \
-            + lbrycrd.rev_hex(self.get_block_hash(res)) \
-            + lbrycrd.rev_hex(res.get('merkle_root')) \
-            + lbrycrd.rev_hex(res.get('claim_trie_root')) \
-            + lbrycrd.int_to_hex(int(res.get('timestamp')), 4) \
-            + lbrycrd.int_to_hex(int(res.get('bits')), 4) \
-            + lbrycrd.int_to_hex(int(res.get('nonce')), 4)
+        s = int_to_hex(res.get('version'), 4) \
+            + rev_hex(self.get_block_hash(res)) \
+            + rev_hex(res.get('merkle_root')) \
+            + rev_hex(res.get('claim_trie_root')) \
+            + int_to_hex(int(res.get('timestamp')), 4) \
+            + int_to_hex(int(res.get('bits')), 4) \
+            + int_to_hex(int(res.get('nonce')), 4)
 
         return s
 
     def deserialize_header(self, s):
         h = {}
         h['version'] = hex_to_int(s[0:4])
-        h['prev_block_hash'] = lbrycrd.hash_encode(s[4:36])
-        h['merkle_root'] = lbrycrd.hash_encode(s[36:68])
-        h['claim_trie_root'] = lbrycrd.hash_encode(s[68:100])
+        h['prev_block_hash'] = hash_encode(s[4:36])
+        h['merkle_root'] = hash_encode(s[36:68])
+        h['claim_trie_root'] = hash_encode(s[68:100])
         h['timestamp'] = hex_to_int(s[100:104])
         h['bits'] = hex_to_int(s[104:108])
         h['nonce'] = hex_to_int(s[108:112])
@@ -119,12 +113,12 @@ class LbryCrd(util.PrintError):
     def hash_header(self, header):
         if header is None:
             return '0' * 64
-        return lbrycrd.hash_encode(lbrycrd.Hash(self.serialize_header(header).decode('hex')))
+        return hash_encode(Hash(self.serialize_header(header).decode('hex')))
 
     def pow_hash_header(self, header):
         if header is None:
             return '0' * 64
-        return lbrycrd.hash_encode(lbrycrd.PoWHash(self.serialize_header(header).decode('hex')))
+        return hash_encode(PoWHash(self.serialize_header(header).decode('hex')))
 
     def path(self):
         return os.path.join(self.config.path, 'blockchain_headers')
@@ -134,7 +128,6 @@ class LbryCrd(util.PrintError):
         if os.path.exists(filename):
             return
         try:
-            import urllib, socket
             socket.setdefaulttimeout(30)
             self.print_error("downloading ", self.headers_url)
             self.retrieving_headers = True
@@ -298,8 +291,8 @@ def get_blockchain(config, network):
     pubkey_address = blockchain_params[chain]['pubkey_address']
     pubkey_address_prefix = blockchain_params[chain]['pubkey_address_prefix']
 
-    lbrycrd.SCRIPT_ADDRESS = (script_address, script_address_prefix)
-    lbrycrd.PUBKEY_ADDRESS = (pubkey_address, pubkey_address_prefix)
+    SCRIPT_ADDRESS = (script_address, script_address_prefix)
+    PUBKEY_ADDRESS = (pubkey_address, pubkey_address_prefix)
 
     if chain == 'lbrycrd_main':
         return LbryCrd(config, network)

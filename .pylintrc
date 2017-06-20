@@ -117,7 +117,8 @@ disable=
   unused-variable,
   wildcard-import,
   wrong-import-order,
-  wrong-import-position
+  wrong-import-position,
+  deprecated-lambda,
 
 
 [REPORTS]

@@ -1,8 +1,7 @@
 import re
 
-import dns
-from lbryum import lbrycrd
-from lbryum.util import StoreDict
+from lbryum.lbrycrd import is_address
+from lbryum.store import StoreDict
 
 
 class Contacts(StoreDict):
@@ -10,7 +9,7 @@ class Contacts(StoreDict):
         StoreDict.__init__(self, config, 'contacts')
 
     def resolve(self, k):
-        if lbrycrd.is_address(k):
+        if is_address(k):
             return {
                 'address': k,
                 'type': 'address'
@@ -22,32 +21,7 @@ class Contacts(StoreDict):
                     'address': addr,
                     'type': 'contact'
                 }
-        out = self.resolve_openalias(k)
-        if out:
-            address, name, validated = out
-            return {
-                'address': address,
-                'name': name,
-                'type': 'openalias',
-                'validated': validated
-            }
         raise Exception("Invalid Bitcoin address or alias", k)
-
-    def resolve_openalias(self, url):
-        # support email-style addresses, per the OA standard
-        url = url.replace('@', '.')
-        records, validated = dns.query(url, dns.rdatatype.TXT)
-        prefix = 'btc'
-        for record in records:
-            string = record.strings[0]
-            if string.startswith('oa1:' + prefix):
-                address = self.find_regex(string, r'recipient_address=([A-Za-z0-9]+)')
-                name = self.find_regex(string, r'recipient_name=([^;]+)')
-                if not name:
-                    name = address
-                if not address:
-                    continue
-                return address, name, validated
 
     def find_regex(self, haystack, needle):
         regex = re.compile(needle)

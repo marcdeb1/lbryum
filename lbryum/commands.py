@@ -18,17 +18,20 @@ from lbryschema.error import DecodeError
 from lbryschema.signer import SECP256k1, get_signer
 from lbryschema.uri import URIParseError, parse_lbry_uri
 
-from lbryum import contacts
-from lbryum import lbrycrd
-from lbryum import util
-from lbryum.claims import InvalidProofError, verify_proof
-from lbryum.lbrycrd import COIN, Hash, TYPE_ADDRESS, hash_160, hash_160_to_bc_address
-from lbryum.lbrycrd import RECOMMENDED_CLAIMTRIE_HASH_CONFIRMS, TYPE_CLAIM, TYPE_SUPPORT
-from lbryum.lbrycrd import base_decode, is_address, TYPE_UPDATE
+from lbryum.contacts import Contacts
+from lbryum.constants import COIN, TYPE_ADDRESS, TYPE_CLAIM, TYPE_SUPPORT, TYPE_UPDATE
+from lbryum.constants import RECOMMENDED_CLAIMTRIE_HASH_CONFIRMS
+from lbryum.hashing import Hash, hash_160
+from lbryum.claims import verify_proof
+from lbryum.lbrycrd import hash_160_to_bc_address, is_address, decode_claim_id_hex
+from lbryum.lbrycrd import encode_claim_id_hex, encrypt_message, public_key_from_private_key
+from lbryum.lbrycrd import claim_id_hash, verify_message
+from lbryum.base import base_decode
 from lbryum.transaction import Transaction
 from lbryum.transaction import decode_claim_script, deserialize as deserialize_transaction
 from lbryum.transaction import get_address_from_output_script, script_GetOp
-from lbryum.util import NotEnoughFunds, format_satoshis, profiler
+from lbryum.errors import InvalidProofError, NotEnoughFunds
+from lbryum.util import format_satoshis, profiler, rev_hex
 
 
 log = logging.getLogger(__name__)
@@ -147,7 +150,7 @@ class Commands:
         self._callback = callback
         self._password = password
         self.new_password = new_password
-        self.contacts = contacts.Contacts(self.config)
+        self.contacts = Contacts(self.config)
 
     def _run(self, method, args, password_getter):
         cmd = known_commands[method]
@@ -278,7 +281,7 @@ class Commands:
         """Sign a transaction. The wallet keys will be used unless a private key is provided."""
         t = Transaction(tx)
         if privkey:
-            pubkey = lbrycrd.public_key_from_private_key(privkey)
+            pubkey = public_key_from_private_key(privkey)
             t.sign({pubkey: privkey})
         else:
             self.wallet.sign_transaction(t, self._password)
@@ -458,7 +461,7 @@ class Commands:
     def verifymessage(self, address, signature, message):
         """Verify a signature."""
         sig = base64.b64decode(signature)
-        return lbrycrd.verify_message(address, sig, message)
+        return verify_message(address, sig, message)
 
     def _mktx(self, outputs, fee, change_addr, domain, nocheck, unsigned, claim_name=None,
               claim_val=None,
@@ -487,7 +490,8 @@ class Commands:
                 amount = int(COIN * Decimal(amount))
             txout_type = TYPE_ADDRESS
             val = address
-            if claim_name is not None and claim_val is not None and claim_id is not None and abandon_txid is not None:
+            if claim_name is not None and claim_val is not None and claim_id is not None\
+                    and abandon_txid is not None:
                 assert len(outputs) == 1
                 txout_type |= TYPE_UPDATE
                 val = ((claim_name, claim_id, claim_val), val)
@@ -674,7 +678,7 @@ class Commands:
     @command('')
     def encrypt(self, pubkey, message):
         """Encrypt a message with a public key. Use quotes if the message contains whitespaces."""
-        return lbrycrd.encrypt_message(message, pubkey)
+        return encrypt_message(message, pubkey)
 
     @command('wp')
     def decrypt(self, pubkey, encrypted):
@@ -692,9 +696,9 @@ class Commands:
             try:
                 req = urllib2.Request(URL, json.dumps(data), headers)
                 response_stream = urllib2.urlopen(req)
-                util.print_error('Got Response for %s' % address)
+                log.info('Got Response for %s' % address)
             except BaseException as e:
-                util.print_error(str(e))
+                log.error(str(e))
 
         self.network.send([('blockchain.address.subscribe', [address])], callback)
         return True
@@ -1463,9 +1467,7 @@ class Commands:
                 nout = i
         assert (nout is not None)
 
-        claimid = lbrycrd.encode_claim_id_hex(
-            lbrycrd.claim_id_hash(lbrycrd.rev_hex(tx.hash()).decode('hex'), nout)
-        )
+        claimid = encode_claim_id_hex(claim_id_hash(rev_hex(tx.hash()).decode('hex'), nout))
         return {"success": True, "txid": tx.hash(), "nout": nout, "tx": str(tx),
                 "fee": str(Decimal(tx.get_fee()) / COIN), "claim_id": claimid}
 
@@ -1580,7 +1582,7 @@ class Commands:
         if change_addr is None:
             change_addr = self.wallet.create_new_address(for_change=True)
 
-        claim_id = lbrycrd.decode_claim_id_hex(claim_id)
+        claim_id = decode_claim_id_hex(claim_id)
         amount = int(COIN * amount)
         if amount <= 0:
             return {'success': False, 'reason': 'Amount must be greater than 0'}
@@ -1734,7 +1736,7 @@ class Commands:
                         return {'success': False,
                                 'reason': "Cannot sign with certificate %s" % certificate_id}
 
-        decoded_claim_id = lbrycrd.decode_claim_id_hex(claim_id)
+        decoded_claim_id = decode_claim_id_hex(claim_id)
 
         if amount is not None:
             amount = int(COIN * amount)

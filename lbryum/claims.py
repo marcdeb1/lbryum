@@ -1,10 +1,7 @@
 import binascii
 
-from lbryum.lbrycrd import Hash
-
-
-class InvalidProofError(Exception):
-    pass
+from lbryum.hashing import Hash
+from lbryum.errors import InvalidProofError
 
 
 def height_to_vch(n):

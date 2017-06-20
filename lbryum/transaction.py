@@ -1,10 +1,18 @@
 import sys
 import types
 import exceptions
+import struct
+import ecdsa
+from ecdsa.curves import SECP256k1
+import hashlib
 
-from lbryum import lbrycrd
-from lbryum.lbrycrd import *
-from lbryum.util import print_error, profiler
+from lbryum.constants import TYPE_SCRIPT, TYPE_PUBKEY, TYPE_UPDATE, TYPE_SUPPORT, TYPE_CLAIM
+from lbryum.constants import TYPE_ADDRESS
+from lbryum.hashing import Hash, hash_160, hash_encode
+from lbryum.lbrycrd import hash_160_to_bc_address, bc_address_to_hash_160, op_push
+from lbryum.lbrycrd import address_from_private_key, point_to_ser, MyVerifyingKey, MySigningKey
+from lbryum.lbrycrd import public_key_to_bc_address, regenerate_key, public_key_from_private_key
+from lbryum.util import print_error, profiler, var_int, int_to_hex
 
 NO_SIGNATURE = 'ff'
 
@@ -453,8 +461,8 @@ def decode_claim_script(decoded_script):
     op += 1
     if decoded_script[op][0] != opcodes.OP_DROP and decoded_script[0][0] == opcodes.OP_CLAIM_NAME:
         return False
-    elif decoded_script[op][0] != opcodes.OP_2DROP and decoded_script[0][
-        0] == opcodes.OP_UPDATE_CLAIM:
+    elif decoded_script[op][0] != opcodes.OP_2DROP and decoded_script[0][0] == \
+            opcodes.OP_UPDATE_CLAIM:
         return False
     op += 1
     if decoded_script[0][0] == opcodes.OP_CLAIM_NAME:
@@ -943,7 +951,7 @@ class Transaction:
                     for_sig = Hash(self.tx_for_sig(i).decode('hex'))
                     pkey = regenerate_key(sec)
                     secexp = pkey.secret
-                    private_key = lbrycrd.MySigningKey.from_secret_exponent(secexp, curve=SECP256k1)
+                    private_key = MySigningKey.from_secret_exponent(secexp, curve=SECP256k1)
                     public_key = private_key.get_verifying_key()
                     sig = private_key.sign_digest_deterministic(for_sig, hashfunc=hashlib.sha256,
                                                                 sigencode=ecdsa.util.sigencode_der)

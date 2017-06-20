@@ -10,10 +10,10 @@ import time
 from collections import defaultdict, deque
 from threading import Lock
 
-import socks
-import util
 from lbryum import __version__ as LBRYUM_VERSION
-from lbryum import lbrycrd
+from lbryum.constants import COIN
+from lbryum import socks
+from lbryum.util import DaemonThread, normalize_version
 from lbryum.blockchain import BLOCKS_PER_CHUNK, get_blockchain
 from lbryum.interface import Connection, Interface
 from lbryum.simple_config import SimpleConfig
@@ -63,8 +63,8 @@ def parse_servers(result):
                 if pruning_level == '':
                     pruning_level = '0'
         try:
-            is_recent = cmp(util.normalize_version(version),
-                            util.normalize_version(PROTOCOL_VERSION)) >= 0
+            is_recent = cmp(normalize_version(version),
+                            normalize_version(PROTOCOL_VERSION)) >= 0
         except Exception:
             is_recent = False
 
@@ -133,7 +133,7 @@ def serialize_server(host, port, protocol):
     return str(':'.join([host, port, protocol]))
 
 
-class Network(util.DaemonThread):
+class Network(DaemonThread):
     """The Network class manages a set of connections to remote lbryum
     servers, each connected socket is handled by an Interface() object.
     Connections are initiated by a Connection() thread which stops once
@@ -149,7 +149,7 @@ class Network(util.DaemonThread):
     def __init__(self, config=None):
         if config is None:
             config = {}  # Do not use mutables as default values!
-        util.DaemonThread.__init__(self)
+        DaemonThread.__init__(self)
         self.config = SimpleConfig(config) if isinstance(config, dict) else config
         self.num_server = 8 if not self.config.get('oneserver') else 0
         self.blockchain = get_blockchain(self.config, self)
@@ -471,12 +471,12 @@ class Network(util.DaemonThread):
                 self.notify('banner')
         elif method == 'blockchain.estimatefee':
             if error is None:
-                self.fee = int(result * lbrycrd.COIN)
+                self.fee = int(result * COIN)
                 log.info("recommended fee %s", self.fee)
                 self.notify('fee')
         elif method == 'blockchain.relayfee':
             if error is None:
-                self.relay_fee = int(result * lbrycrd.COIN)
+                self.relay_fee = int(result * COIN)
                 log.info("relayfee %s", self.relay_fee)
         elif method == 'blockchain.block.get_chunk':
             self.on_get_chunk(interface, response)
@@ -562,7 +562,7 @@ class Network(util.DaemonThread):
                     # check cached response for subscriptions
                     r = self.sub_cache.get(k)
                 if r is not None:
-                    util.print_error("cache hit", k)
+                    log.warning("cache hit: %s", k)
                     callback(r)
                 else:
                     message_id = self.queue_request(method, params)

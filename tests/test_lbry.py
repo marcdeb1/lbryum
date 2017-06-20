@@ -3,11 +3,13 @@ import unittest
 
 from lbryum import claims
 from lbryum import commands
-from lbryum import lbrycrd
+from lbryum.hashing import Hash, PoWHash
+from lbryum.lbrycrd import claim_id_hash
+from lbryum.util import rev_hex
 
 
 def get_powhash(input_str):
-    out = lbrycrd.PoWHash(input_str)
+    out = PoWHash(input_str)
     hex_out = out.encode('hex_codec')
     # need to reformat to little endian int
     out_str = ''
@@ -45,10 +47,10 @@ class Test_Lbry(unittest.TestCase):
         claim2_node_hash = claims.get_hash_for_outpoint(
             binascii.unhexlify(claim2_txid)[::-1], claim2_outpoint, claim2_height)
         to_hash1 = claim1_node_hash
-        hash1 = lbrycrd.Hash(to_hash1)
+        hash1 = Hash(to_hash1)
         to_hash2 = chr(claim1_name) + hash1 + chr(claim2_name) + claim2_node_hash
 
-        root_hash = lbrycrd.Hash(to_hash2)
+        root_hash = Hash(to_hash2)
 
         proof = {
             'last takeover height': claim1_height, 'txhash': claim1_txid, 'nOut': claim1_outpoint,
@@ -87,5 +89,5 @@ class Test_Lbry(unittest.TestCase):
         txid = "4d08012feefec192bdb45495dcedc171a56d369539ce2d589e3e1ec81a882bb4"
         nout = 1
         claim_id = "a438fc7701e10e0e5c41d7a342be1190d9bed57b"
-        out = lbrycrd.claim_id_hash(lbrycrd.rev_hex(txid).decode('hex'), nout)
-        self.assertEqual(claim_id, lbrycrd.rev_hex(out.encode('hex')))
+        out = claim_id_hash(rev_hex(txid).decode('hex'), nout)
+        self.assertEqual(claim_id, rev_hex(out.encode('hex')))

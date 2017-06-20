@@ -1,7 +1,7 @@
 import unittest
 
 from lbryum import commands
-from lbryum import util
+from lbryum.errors import NotEnoughFunds
 
 
 class MocWallet(object):
@@ -27,7 +27,7 @@ class MocWallet(object):
         return out
 
     def make_unsigned_transaction(self, coins, outputs, config, tx_fee, change_addr):
-        raise util.NotEnoughFunds()
+        raise NotEnoughFunds()
 
     def get_name_claims(self, domain=None, include_abandoned=True, include_supports=True):
         return []

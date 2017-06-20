@@ -1,7 +1,7 @@
 import logging
 from threading import Lock
 
-from lbryum.lbrycrd import Hash, hash_encode
+from lbryum.hashing import Hash, hash_encode
 from lbryum.transaction import Transaction
 from lbryum.util import ThreadJob
 

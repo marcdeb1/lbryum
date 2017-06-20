@@ -29,7 +29,6 @@ import pbkdf2
 
 from lbryum import version
 from lbryum.lbrycrd import is_new_seed
-from lbryum.util import print_error
 
 log = logging.getLogger(__name__)
 

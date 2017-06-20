@@ -7,7 +7,8 @@ import requests
 from lbryum.commands import Commands, config_variables, get_parser, known_commands
 from lbryum.daemon import Daemon, get_daemon
 from lbryum.network import Network, SimpleConfig
-from lbryum.util import InvalidPassword, json_decode
+from lbryum.util import json_decode
+from lbryum.errors import InvalidPassword
 from lbryum.wallet import Wallet, WalletStorage
 
 log = logging.getLogger(__name__)
