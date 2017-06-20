@@ -27,7 +27,6 @@ import logging
 import ecdsa
 import pbkdf2
 
-from lbryum import i18n
 from lbryum import version
 from lbryum.lbrycrd import is_new_seed
 from lbryum.util import print_error
@@ -105,10 +104,7 @@ class Mnemonic(object):
     # Seed derivation no longer follows BIP39
     # Mnemonic phrase uses a hash based checksum, instead of a wordlist-dependent checksum
 
-    def __init__(self, lang=None):
-        if lang in [None, '']:
-            lang = i18n.language.info().get('language', 'en')
-        print_error('language', lang)
+    def __init__(self, lang="en"):
         filename = filenames.get(lang[0:2], 'english.txt')
         s = pkgutil.get_data('lbryum', os.path.join('wordlist', filename))
         s = unicodedata.normalize('NFKD', s.decode('utf8'))

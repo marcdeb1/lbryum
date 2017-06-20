@@ -11,7 +11,6 @@ from unicodedata import normalize
 
 from lbryum.account import *
 from lbryum.coinchooser import COIN_CHOOSERS
-from lbryum.i18n import _
 from lbryum.mnemonic import Mnemonic
 from lbryum.synchronizer import Synchronizer
 from lbryum.transaction import Transaction
@@ -1297,8 +1296,8 @@ class Abstract_Wallet(PrintError):
             while not self.is_up_to_date():
                 if callback:
                     msg = "%s\n%s %d" % (
-                        _("Please wait..."),
-                        _("Addresses generated:"),
+                        "Please wait...",
+                        "Addresses generated:",
                         len(self.addresses(True)))
                     callback(msg)
                 time.sleep(0.1)
@@ -1306,7 +1305,7 @@ class Abstract_Wallet(PrintError):
         def wait_for_network():
             while not self.network.is_connected():
                 if callback:
-                    msg = "%s \n" % (_("Connecting..."))
+                    msg = "%s \n" % ("Connecting...")
                     callback(msg)
                 time.sleep(0.1)
 
@@ -1634,7 +1633,8 @@ class BIP32_Wallet(Deterministic_Wallet):
 
     def get_master_private_key(self, account, password):
         k = self.master_private_keys.get(account)
-        if not k: return
+        if not k:
+            return
         xprv = pw_decode(k, password)
         try:
             deserialize_xkey(xprv)
@@ -1773,7 +1773,7 @@ class BIP32_HD_Wallet(BIP32_RD_Wallet):
         if self.can_change_password():
             self.check_password(password)
         assert self.next_account_number() == 0
-        self.create_next_account(password, _('Main account'))
+        self.create_next_account(password, 'Main account')
         self.create_next_account(password)
 
     def create_next_account(self, password, label=None):

@@ -12,8 +12,6 @@ import traceback
 from collections import defaultdict
 from decimal import Decimal
 
-from lbryum.i18n import _
-
 log = logging.getLogger("lbryum")
 
 base_units = {'BTC': 8, 'mBTC': 5, 'uBTC': 2}
@@ -25,7 +23,7 @@ class NotEnoughFunds(Exception):
 
 class InvalidPassword(Exception):
     def __str__(self):
-        return _("Incorrect password")
+        return "Incorrect password"
 
 
 class SilentException(Exception):

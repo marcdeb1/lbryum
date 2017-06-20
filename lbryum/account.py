@@ -1,5 +1,4 @@
 from lbryum import lbrycrd
-from lbryum.i18n import _
 from lbryum.lbrycrd import *
 from lbryum.transaction import Transaction, is_extended_pubkey
 from lbryum.util import InvalidPassword
@@ -52,7 +51,7 @@ class Account(object):
         return True
 
     def get_name(self, k):
-        return _('Main account')
+        return 'Main account'
 
     def redeem_script(self, for_change, n):
         return None
@@ -124,7 +123,7 @@ class ImportedAccount(Account):
         return {'imported': self.keypairs}
 
     def get_name(self, k):
-        return _('Imported keys')
+        return 'Imported keys'
 
     def update_password(self, old_password, new_password):
         for k, v in self.keypairs.items():
@@ -194,7 +193,7 @@ class BIP32_Account(Account):
         return out
 
     def get_type(self):
-        return _('Standard 1 of 1')
+        return 'Standard 1 of 1'
 
     def get_xpubkeys(self, for_change, n):
         # unsorted
@@ -256,4 +255,4 @@ class Multisig_Account(BIP32_Account):
         return self.xpub_list
 
     def get_type(self):
-        return _('Multisig %d of %d' % (self.m, len(self.xpub_list)))
+        return 'Multisig %d of %d' % (self.m, len(self.xpub_list))
