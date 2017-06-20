@@ -68,7 +68,7 @@ def format_lbrycrd_keys(obj, raw_claim=None):
             elif key == 'in claim trie':
                 new_key = 'in_claim_trie'
             elif key == 'value' and raw_claim:
-                if isinstance(val, unicode) or isinstance(val, str):
+                if isinstance(val, (unicode, str)):
                     try:
                         val = val.decode('hex')
                     except ValueError:
@@ -82,7 +82,7 @@ def format_lbrycrd_keys(obj, raw_claim=None):
             if new_key != key:
                 obj[new_key] = obj[key]
                 del obj[key]
-            if isinstance(val, list) or isinstance(val, dict):
+            if isinstance(val, (list, dict)):
                 obj[new_key] = format_lbrycrd_keys(val, raw_claim=raw_claim)
 
     elif isinstance(obj, list):
@@ -100,7 +100,7 @@ def format_amount_value(obj):
             elif k == 'supports' and isinstance(v, list):
                 obj[k] = [{'txid': txid, 'nout': nout, 'amount': float(amount) / float(COIN)}
                           for (txid, nout, amount) in v]
-            elif isinstance(v, list) or isinstance(v, dict):
+            elif isinstance(v, (list, dict)):
                 obj[k] = format_amount_value(v)
     elif isinstance(obj, list):
         obj = [format_amount_value(o) for o in obj]

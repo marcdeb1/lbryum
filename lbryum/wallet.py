@@ -771,9 +771,9 @@ class Abstract_Wallet(PrintError):
         '''acc_id of None means all user-visible accounts'''
         addr_list = []
         acc_ids = self.accounts_to_show() if acc_id is None else [acc_id]
-        for acc_id in acc_ids:
-            if acc_id in self.accounts:
-                acc = self.accounts[acc_id]
+        for _acc_id in acc_ids:
+            if _acc_id in self.accounts:
+                acc = self.accounts[_acc_id]
                 addr_list += acc.get_addresses(0)
                 if include_change:
                     addr_list += acc.get_addresses(1)
@@ -1058,7 +1058,7 @@ class Abstract_Wallet(PrintError):
 
     def get_label(self, tx_hash):
         label = self.labels.get(tx_hash, '')
-        if label is '':
+        if label == '':
             label = self.get_default_label(tx_hash)
         return label
 
@@ -1949,15 +1949,6 @@ class Wallet(object):
         wallet_type = storage.get('wallet_type')
         WalletClass = Wallet.wallet_class(wallet_type, seed_version)
         wallet = WalletClass(storage)
-
-        # Convert hardware wallets restored with older versions of
-        # Electrum to BIP44 wallets.  A hardware wallet does not have
-        # a seed and plugins do not need to handle having one.
-        rwc = getattr(wallet, 'restore_wallet_class', None)
-        if rwc and storage.get('seed', ''):
-            storage.print_error("converting wallet type to " + rwc.wallet_type)
-            storage.put('wallet_type', rwc.wallet_type)
-            wallet = rwc(storage)
 
         return wallet
 
