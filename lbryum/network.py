@@ -12,7 +12,6 @@ from threading import Lock
 
 from lbryum import __version__ as LBRYUM_VERSION
 from lbryum.constants import COIN
-from lbryum import socks
 from lbryum.util import DaemonThread, normalize_version
 from lbryum.blockchain import BLOCKS_PER_CHUNK, get_blockchain
 from lbryum.interface import Connection, Interface
@@ -350,27 +349,12 @@ class Network(DaemonThread):
         for i in range(self.num_server - 1):
             self.start_random_interface()
 
-    def set_proxy(self, proxy):
-        self.proxy = proxy
-        if proxy:
-            log.info('setting proxy %s', proxy)
-            proxy_mode = proxy_modes.index(proxy["mode"]) + 1
-            socks.setdefaultproxy(proxy_mode, proxy["host"], int(proxy["port"]))
-            socket.socket = socks.socksocket
-            # prevent dns leaks, see http://stackoverflow.com/questions/13184205/dns-over-proxy
-            socket.getaddrinfo = lambda *args: [
-                (socket.AF_INET, socket.SOCK_STREAM, 6, '', (args[0], args[1]))]
-        else:
-            socket.socket = socket._socketobject
-            socket.getaddrinfo = socket._socket.getaddrinfo
-
     def start_network(self, protocol, proxy):
         assert not self.interface and not self.interfaces
         assert not self.connecting and self.socket_queue.empty()
         log.info('starting network')
         self.disconnected_servers = set([])
         self.protocol = protocol
-        self.set_proxy(proxy)
         self.start_interfaces()
 
     def stop_network(self):
@@ -394,12 +378,7 @@ class Network(DaemonThread):
             return
 
         self.auto_connect = auto_connect
-        if self.proxy != proxy or self.protocol != protocol:
-            # Restart the network defaulting to the given server
-            self.stop_network()
-            self.default_server = server
-            self.start_network(protocol, proxy)
-        elif self.default_server != server:
+        if self.default_server != server:
             self.switch_to_interface(server)
         else:
             self.switch_lagging_interface()
