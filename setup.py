@@ -16,8 +16,6 @@ requires = [
     'ecdsa==0.13',
     'pbkdf2',
     'requests',
-    'protobuf==3.2.0',
-    'dnspython',
     'jsonrpclib',
     'six>=1.9.0',
     'appdirs==1.4.3',
