@@ -103,7 +103,8 @@ class Mnemonic(object):
     # Seed derivation no longer follows BIP39
     # Mnemonic phrase uses a hash based checksum, instead of a wordlist-dependent checksum
 
-    def __init__(self, lang="en"):
+    def __init__(self, lang=None):
+        lang = lang or "en"
         filename = filenames.get(lang[0:2], 'english.txt')
         s = pkgutil.get_data('lbryum', os.path.join('wordlist', filename))
         s = unicodedata.normalize('NFKD', s.decode('utf8'))

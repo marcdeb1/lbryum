@@ -32,13 +32,14 @@ setup(
     name="lbryum",
     version=__version__,
     install_requires=requires,
-    packages=find_packages(base_dir, exclude=['tests'], include=['lbryum/wordlist/*.txt']),
+    packages=find_packages(exclude=['tests']),
+    package_data={'lbryum': ['wordlist/*.txt']},
     entry_points={'console_scripts': console_scripts},
-    data_files=data_files,
     description="Lightweight LBRYcrd Wallet",
     author="LBRY Inc.",
     author_email="hello@lbry.io",
     license="GNU GPLv3",
     url="https://lbry.io",
-    long_description="""Lightweight LBRYcrd Wallet"""
+    long_description="""Lightweight LBRYcrd Wallet""",
+    zip_safe=False
 )

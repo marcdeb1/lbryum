@@ -32,6 +32,7 @@ from lbryum.transaction import decode_claim_script, deserialize as deserialize_t
 from lbryum.transaction import get_address_from_output_script, script_GetOp
 from lbryum.errors import InvalidProofError, NotEnoughFunds
 from lbryum.util import format_satoshis, rev_hex
+from lbryum.mnemonic import Mnemonic
 
 
 log = logging.getLogger(__name__)
@@ -212,14 +213,14 @@ class Commands(object):
     @command('')
     def make_seed(self, nbits=128, entropy=1, language=None):
         """Create a seed"""
-        from mnemonic import Mnemonic
+        language = language or "en"
         s = Mnemonic(language).make_seed(nbits, custom_entropy=entropy)
         return s.encode('utf8')
 
     @command('')
     def check_seed(self, seed, entropy=1, language=None):
         """Check that a seed was generated with given entropy"""
-        from mnemonic import Mnemonic
+        language = language or "en"
         return Mnemonic(language).check_seed(seed, entropy)
 
     @command('n')
