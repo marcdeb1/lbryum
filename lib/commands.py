@@ -797,7 +797,13 @@ class Commands:
             if decoded.has_signature:
                 if certificate is None:
                     print_msg("fetching certificate to check claim signature")
-                    certificate = self.getclaimbyid(decoded.certificate_id)
+                    cached_certificate = self.getcachedcertificate()
+                    if cached_certificate:
+                        if cached_certificate['claim_id'] == decoded.certificate_id:
+                            certificate = cached_certificate
+                    else:
+                        certificate = self.getclaimbyid(decoded.certificate_id)
+                        self.setcachedcertificate(certificate)
                     if not certificate:
                         raise Exception('Certificate claim {} not found'.format(decoded.certificate_id))
                 claim_result['has_signature'] = True
@@ -954,6 +960,27 @@ class Commands:
         if not certificate_id:
             return {'error': 'no default certificate configured'}
         return self.getclaimbyid(certificate_id)
+
+    def getcachedcertificate(self):
+        """
+        Get cached certificate to speed up claim verification
+        """
+        filename = "cache.json"
+
+        if not os.path.isfile(filename):
+            return False
+
+        with open(filename, 'r') as f:
+            certificate = json.load(f)
+
+        if not certificate:
+            return False
+        return certificate
+
+    def setcachedcertificate(self, certificate):
+        filename = "cache.json"
+        with open(filename, 'w') as f:
+            json.dump(certificate, f)
 
     @staticmethod
     def prepare_claim_queries(start_position, query_size, channel_claim_infos):
